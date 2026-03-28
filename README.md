@@ -6,4 +6,5 @@
 
 
 2. 기술 스택 
-<img width="1305" height="194" alt="image" src="https://github.com/user-attachments/assets/a903c9cd-3a7a-47cc-91b2-46d36ee525c7" />
+<img width="1305" height="270" alt="image" src="https://github.com/user-attachments/assets/9100f320-863c-47c5-ba7a-3687a8556c10" />
+
