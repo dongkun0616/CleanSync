@@ -8,11 +8,9 @@
 
 2. 기술 스택 
 Frontend	[React.js]
-
 Backend	[Node.js (Express)]
-
 Database	[MySQL]
-
 배포/인프라	[AWS(서버), MQTT Broker(데이터 통신)]
-
 협업 도구	[GitHub, Notion, Discord]
+<img width="1134" height="345" alt="image" src="https://github.com/user-attachments/assets/8fc1f56b-362e-448d-9268-041d27ceb4a7" />
+
