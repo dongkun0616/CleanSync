@@ -137,3 +137,22 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Dependency directories
+node_modules/
+
+# Build outputs
+build/
+dist/
+
+# Env files (Security)
+.env
+.env.local
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Arduino/Hardware junk
+*.pyc
+.vscode/
