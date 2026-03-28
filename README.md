@@ -8,7 +8,11 @@
 
 2. 기술 스택 
 Frontend	[React.js]
+
 Backend	[Node.js (Express)]
+
 Database	[MySQL]
+
 배포/인프라	[AWS(서버), MQTT Broker(데이터 통신)]
+
 협업 도구	[GitHub, Notion, Discord]
