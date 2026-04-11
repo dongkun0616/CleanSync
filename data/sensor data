@@ -1,2 +1,18 @@
-INSERT INTO sensor_data (DUST, TEMP, HUM, NOS, TODAY, TIME, DST, CST, CS)
-VALUES (35.50, 24.30, 58.20, 67.80, '2026-04-08', '14:30:00', '보통', '혼잡', 78);
+# 가상 센서 데이터
+
+INSERT INTO home_status
+(DUST_PM10, DUST_PM25, TEMP, HUM, NOS, DST, CST, CS, WIFI_COUNT)
+VALUES
+(42.50, 18.30, 24.80, 51.20, 58.40, '보통', '여유', 22, 7);
+
+INSERT INTO statistics_logs
+(DUST_PM10, DUST_PM25, TEMP, HUM, NOS, DST)
+VALUES
+(41.20, 17.80, 24.50, 50.00, 57.20, '보통'),
+(43.10, 18.90, 25.10, 52.40, 59.10, '보통'),
+(48.30, 22.10, 26.00, 54.00, 61.30, '나쁨');
+
+INSERT INTO app_settings
+(alert_dust_threshold, alert_noise_threshold, dust_alert_enabled, noise_alert_enabled, theme_mode, service_info, CST, CS)
+VALUES
+(35.00, 65.00, 1, 1, 'Light', 'Clean-Sync', '보통', 50);
