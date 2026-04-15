@@ -1,0 +1,26 @@
+DELETE FROM home_status
+WHERE id <> 1;
+
+INSERT INTO home_status
+(id, DUST_PM10, DUST_PM25, TEMP, HUM, NOS, CREATE_AT, DST, CST, CS, WIFI_COUNT, location)
+VALUES
+(1, 0.00, 0.00, 0.00, 0.00, 0.00, CURRENT_TIMESTAMP, NULL, NULL, NULL, 0, '동아리방')
+ON DUPLICATE KEY UPDATE id = id;
+
+가상의 센서 데이터
+INSERT INTO statistics_logs
+(DUST_PM10, DUST_PM25, TEMP, HUM, NOS, DST, CREATE_AT, location)
+VALUES
+(42.50, 18.30, 24.80, 51.20, 58.40, '보통', CURRENT_TIMESTAMP, '동아리방');
+
+UPDATE home_status
+SET
+    DUST_PM10 = 42.50,
+    DUST_PM25 = 18.30,
+    TEMP = 24.80,
+    HUM = 51.20,
+    NOS = 58.40,
+    DST = '보통',
+    CREATE_AT = CURRENT_TIMESTAMP,
+    location = '동아리방'
+WHERE id = 1;
