@@ -1,0 +1,15 @@
+ssh -i "my-server-key.pem" ec2-user@13.124.252.181
+
+mysql -h clean-sync-db.cr2k0aogq0fy.ap-northeast-2.rds.amazonaws.com -u admin -p
+
+python3 mqtt_to_db.py
+
+aws ipv4 : 13.124.252.181
+
+엔드 포인트: clean-sync-db.cr2k0aogq0fy.ap-northeast-2.rds.amazonaws.com
+DB ID/ PW: admin / simjh1024
+Database 이름 : iot_db
+
+
+
+낼 : 프론트 엔드 & 백엔드 기능 구현 + 깃허브를 통해 개인정보나 보안 문제등 해결해야함.
