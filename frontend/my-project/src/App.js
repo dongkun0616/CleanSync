@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import HomeData from './HomeData';
 import ServerStatus from './ServerStatus';
-
+//ㅇ
 function App() {
   return (
     <Router>
