@@ -44,7 +44,7 @@ def on_message(client, userdata, msg):
         # DB 연결
         conn = pymysql.connect(**DB_CONFIG)
         with conn.cursor() as cursor:
-            # 1. 전체 이력 저장 (home_status) - 이건 기록용이라 그대로 INSERT
+            # 1. 전체 이력 저장 (home_status)
             sql_home = """INSERT INTO home_status 
                          (DUST_PM10, DUST_PM25, TEMP, HUM, NOS, CREATE_AT, DST, CST, CS, WIFI_COUNT, location) 
                          VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
@@ -55,18 +55,15 @@ def on_message(client, userdata, msg):
             )
             cursor.execute(sql_home, home_values)
 
-            # 2. 최신 상태 업데이트 (statistics_logs) - UPDATE 방식으로 변경
-            # 만약 테이블에 데이터가 하나도 없으면 INSERT, 있으면 1번 데이터를 UPDATE 합니다.
+            # 2. 통계/차트용 데이터 저장 (statistics_logs) 
+            # id를 명시하지 않으면 알아서 1씩 올라가며 차곡차곡 쌓입니다.
             sql_stats = """INSERT INTO statistics_logs 
-                          (id, DUST_PM10, DUST_PM25, TEMP, HUM, NOS, DST, CREATE_AT, location) 
-                          VALUES (1, %s, %s, %s, %s, %s, %s, %s, %s)
-                          ON DUPLICATE KEY UPDATE 
-                          DUST_PM10=%s, DUST_PM25=%s, TEMP=%s, HUM=%s, NOS=%s, DST=%s, CREATE_AT=%s, location=%s"""
+                          (DUST_PM10, DUST_PM25, TEMP, HUM, NOS, DST, CREATE_AT, location) 
+                          VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
             
-            # (id=1, 값들..., 업데이트할 값들...)
             stats_values = (
-                data['pm10'], data['pm25'], data['temp'], data['humi'], data['sound'], dst_status, formatted_time, "TEST",
-                data['pm10'], data['pm25'], data['temp'], data['humi'], data['sound'], dst_status, formatted_time, "TEST"
+                data['pm10'], data['pm25'], data['temp'], data['humi'], data['sound'],
+                dst_status, formatted_time, "TEST"
             )
             cursor.execute(sql_stats, stats_values)
 
