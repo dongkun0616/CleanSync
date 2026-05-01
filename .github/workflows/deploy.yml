@@ -28,3 +28,19 @@ jobs:
             pkill -f mqtt_to_db.py || true
             cd ~/clean-sync/collector
             nohup python3 -u mqtt_to_db.py &  
+      - name: Build Frontend
+        run: |
+            cd frontend/my-project
+            npm install
+            npm run build
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          script: |
+              cd ~/clean-sync
+              git fetch origin main
+              git reset --hard origin/main
