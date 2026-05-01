@@ -37,9 +37,9 @@ app.get("/", (req, res) => {
 });
 
 // 테스트 API
-app.get("/test1", (req, res) => {
+app.get("/test", (req, res) => {
   saveLog("/test API 호출");
-  res.json({ message: "API 정상 작동" });
+  res.json({ message: "서버 정상 작동" });
 });
 
 // 홈 데이터 조회 API
