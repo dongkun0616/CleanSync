@@ -46,16 +46,15 @@ def on_message(client, userdata, msg):
         # DB 연결 및 저장
         conn = pymysql.connect(**DB_CONFIG)
         with conn.cursor() as cursor:
-            # --- [2. SQL 문에 시간 컬럼 추가] ---
-            # 테이블의 시간 컬럼명이 'created_at'이라고 가정합니다. 
-            # 만약 컬럼명이 다르다면 아래 SQL의 컬럼명을 수정하세요.
+            # 컬럼명을 이미지와 똑같이 CREATE_AT 으로 수정했습니다.
             sql = """INSERT INTO home_status 
-                     (DUST_PM10, DUST_PM25, TEMP, HUM, NOS, DST, CST, CS, WIFI_COUNT, location, created_at) 
+                     (DUST_PM10, DUST_PM25, TEMP, HUM, NOS, CREATE_AT, DST, CST, CS, WIFI_COUNT, location) 
                      VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
             
             cursor.execute(sql, (
                 data['pm10'], data['pm25'], data['temp'], data['humi'], data['sound'],
-                dst_status, "쾌적", 0, 0, "TEST", formatted_time
+                formatted_time,  # 위에서 만든 한국 시간이 CREATE_AT 컬럼에 들어갑니다.
+                dst_status, "쾌적", 0, 0, "TEST"
             ))
         conn.commit()
         conn.close()
