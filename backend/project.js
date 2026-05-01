@@ -50,9 +50,7 @@ app.get("/home", (req, res) => {
   saveLog("/home API 호출 시작");
 
   const sql = `
-    SELECT *
-    FROM home_status
-    ORDER BY CREATE_AT DESC
+    SELECT id FROM home_status ORDER BY id DESC LIMIT 1
   `;
 
   db.query(sql, (err, results) => {
