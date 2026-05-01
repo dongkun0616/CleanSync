@@ -36,7 +36,7 @@ app.get("/", (req, res) => {
   res.send("서버 정상 작동 중입니다. /test 또는 /home으로 접속하세요.");
 });
 
-// 테스트 API
+// 테스트 API 배포1
 app.get("/test", (req, res) => {
   saveLog("/test API 호출");
   res.json({ message: "서버 정상 작동" });
