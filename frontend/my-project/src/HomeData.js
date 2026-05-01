@@ -33,15 +33,18 @@ export default function TablePage() {
         setTimeout(() => setFade(false), 500);
 
         setData({
-          pm10: parseFloat(latest.DUST_PM10 || 0).toFixed(2),
-          pm25: parseFloat(latest.DUST_PM25 || 0).toFixed(2),
-          temp: parseFloat(latest.TEMP || 0).toFixed(1),
-          hum: parseFloat(latest.HUM || 0).toFixed(1),
-          nos: parseFloat(latest.NOS || 0).toFixed(2),
-          time: latest.CREATE_AT 
-            ? new Date(latest.CREATE_AT).toLocaleString('ko-KR') 
-            : "시간 정보 없음"
-        });
+  pm10: parseFloat(latest.DUST_PM10 || 0).toFixed(2),
+  pm25: parseFloat(latest.DUST_PM25 || 0).toFixed(2),
+  temp: parseFloat(latest.TEMP || 0).toFixed(1),
+  hum: parseFloat(latest.HUM || 0).toFixed(1),
+  nos: parseFloat(latest.NOS || 0).toFixed(2),
+  
+  // 가공하지 말고 백엔드에서 온 문자열 그대로 사용!
+  // T와 Z만 보기 좋게 공백으로 바꿔줍니다.
+  time: latest.CREATE_AT 
+    ? latest.CREATE_AT.replace('T', ' ').replace('.000Z', '') 
+    : "시간 정보 없음"
+});
       }
     } catch (e) {
       console.error("데이터 호출 에러:", e);
