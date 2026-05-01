@@ -1,19 +1,18 @@
 import os
 import pymysql
 import paho.mqtt.client as mqtt
-from paho.mqtt.enums import CallbackAPIVersion # 버전 명시를 위해 추가
+from paho.mqtt.enums import CallbackAPIVersion
 import json
 from dotenv import load_dotenv
+# --- [시간 관련 모듈 추가] ---
+from datetime import datetime, timedelta
 
 # --- [설정 로드] ---
-# .env 파일의 내용을 환경 변수로 불러옵니다.
 load_dotenv()
 
-# 환경 변수에서 설정값 가져오기
 MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
 MQTT_TOPIC = "myroom/sensor/data"
 
-# DB 설정 (환경 변수 사용)
 DB_CONFIG = {
     'host': os.getenv("DB_HOST"),
     'user': os.getenv("DB_USER"),
@@ -33,6 +32,12 @@ def on_message(client, userdata, msg):
     try:
         data = json.loads(msg.payload.decode())
         
+        # --- [1. 한국 시간 계산] ---
+        # UTC 시간에 9시간을 더해 한국 시간을 만듭니다.
+        kst_now = datetime.utcnow() + timedelta(hours=9)
+        # DB에 넣기 좋은 문자열 형식으로 변환 (YYYY-MM-DD HH:MM:SS)
+        formatted_time = kst_now.strftime('%Y-%m-%d %H:%M:%S')
+
         # 미세먼지 상태 계산
         dst_status = "좋음"
         if data['pm25'] > 35: dst_status = "나쁨"
@@ -41,29 +46,31 @@ def on_message(client, userdata, msg):
         # DB 연결 및 저장
         conn = pymysql.connect(**DB_CONFIG)
         with conn.cursor() as cursor:
+            # --- [2. SQL 문에 시간 컬럼 추가] ---
+            # 테이블의 시간 컬럼명이 'created_at'이라고 가정합니다. 
+            # 만약 컬럼명이 다르다면 아래 SQL의 컬럼명을 수정하세요.
             sql = """INSERT INTO home_status 
-                     (DUST_PM10, DUST_PM25, TEMP, HUM, NOS, DST, CST, CS, WIFI_COUNT, location) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+                     (DUST_PM10, DUST_PM25, TEMP, HUM, NOS, DST, CST, CS, WIFI_COUNT, location, created_at) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
             
             cursor.execute(sql, (
                 data['pm10'], data['pm25'], data['temp'], data['humi'], data['sound'],
-                dst_status, "쾌적", 0, 0, "TEST"
+                dst_status, "쾌적", 0, 0, "TEST", formatted_time
             ))
         conn.commit()
         conn.close()
-        print(f"✔️ RDS(iot_db) 저장 완료: {data['temp']}°C / PM2.5: {data['pm25']}")
+        print(f"✔️ RDS(iot_db) 저장 완료: {formatted_time} | {data['temp']}°C")
 
     except Exception as e:
         print(f"❌ 에러 발생: {e}")
 
-# MQTT 클라이언트 설정
+# ... (아래 MQTT 클라이언트 설정 부분은 동일) ...
 client = mqtt.Client(CallbackAPIVersion.VERSION2)
 client.on_connect = on_connect
 client.on_message = on_message
 
-print("🚀 AWS 수집 서버 가동 중 (보안 모드)...")
+print("🚀 AWS 수집 서버 가동 중 (한국 시간 보정 모드)...")
 
-# 설정값이 정상적으로 로드되었는지 확인
 if not DB_CONFIG['host']:
     print("❌ 에러: .env 파일에서 정보를 읽어올 수 없습니다!")
 else:
