@@ -6,7 +6,7 @@ export default function ServerStatus() {
 
   const check = async () => {
     try {
-      const res = await axios.get('[http://13.124.252.181:3000/test](http://13.124.252.181:3000/test)');
+      const res = await axios.get('/api/test');
       if (res.status === 200) setStatus('online');
     } catch {
       setStatus('offline');

@@ -25,7 +25,7 @@ export default function TablePage() {
   const fetchData = async () => {
     try {
       // 1. 실제 Node.js 서버 API 호출
-      const res = await axios.get('[http://13.124.252.181:3000/home](http://13.124.252.181:3000/home)');
+     const res = await axios.get('/api/home');
       
       // 2. 백엔드에서 SELECT * 로 가져온 데이터의 첫 번째 행(최신데이터) 사용
       if (res.data && res.data.length > 0) {
