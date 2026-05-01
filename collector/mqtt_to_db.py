@@ -33,9 +33,7 @@ def on_message(client, userdata, msg):
         data = json.loads(msg.payload.decode())
         
         # --- [1. 한국 시간 계산] ---
-        # UTC 시간에 9시간을 더해 한국 시간을 만듭니다.
         kst_now = datetime.utcnow() + timedelta(hours=9)
-        # DB에 넣기 좋은 문자열 형식으로 변환 (YYYY-MM-DD HH:MM:SS)
         formatted_time = kst_now.strftime('%Y-%m-%d %H:%M:%S')
 
         # 미세먼지 상태 계산
@@ -43,22 +41,37 @@ def on_message(client, userdata, msg):
         if data['pm25'] > 35: dst_status = "나쁨"
         elif data['pm25'] > 15: dst_status = "보통"
 
-        # DB 연결 및 저장
+        # DB 연결
         conn = pymysql.connect(**DB_CONFIG)
         with conn.cursor() as cursor:
-            # 컬럼명을 이미지와 똑같이 CREATE_AT 으로 수정했습니다.
-            sql = """INSERT INTO home_status 
-                     (DUST_PM10, DUST_PM25, TEMP, HUM, NOS, CREATE_AT, DST, CST, CS, WIFI_COUNT, location) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+            # --- [트리거 대신 수행: 기존 로그 삭제] ---
+            cursor.execute("DELETE FROM statistics_logs")
+
+            # 1. 전체 이력 저장 (home_status)
+            sql_home = """INSERT INTO home_status 
+                         (DUST_PM10, DUST_PM25, TEMP, HUM, NOS, CREATE_AT, DST, CST, CS, WIFI_COUNT, location) 
+                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
             
-            cursor.execute(sql, (
+            home_values = (
                 data['pm10'], data['pm25'], data['temp'], data['humi'], data['sound'],
-                formatted_time,  # 위에서 만든 한국 시간이 CREATE_AT 컬럼에 들어갑니다.
-                dst_status, "쾌적", 0, 0, "TEST"
-            ))
+                formatted_time, dst_status, "쾌적", 0, 0, "TEST"
+            )
+            cursor.execute(sql_home, home_values)
+
+            # 2. 최신 상태 저장 (statistics_logs) - 이미지의 컬럼명에 맞춤
+            sql_stats = """INSERT INTO statistics_logs 
+                          (DUST_PM10, DUST_PM25, TEMP, HUM, NOS, DST, CREATE_AT, location) 
+                          VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+            
+            stats_values = (
+                data['pm10'], data['pm25'], data['temp'], data['humi'], data['sound'],
+                dst_status, formatted_time, "TEST"
+            )
+            cursor.execute(sql_stats, stats_values)
+
         conn.commit()
         conn.close()
-        print(f"✔️ RDS(iot_db) 저장 완료: {formatted_time} | {data['temp']}°C")
+        print(f"✔️ RDS 데이터 갱신 완료: {formatted_time} | 온도: {data['temp']}°C")
 
     except Exception as e:
         print(f"❌ 에러 발생: {e}")
