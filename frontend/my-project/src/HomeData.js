@@ -30,15 +30,15 @@ export default function TablePage() {
       // 2. 백엔드에서 SELECT * 로 가져온 데이터의 첫 번째 행(최신데이터) 사용
       if (res.data && res.data.length > 0) {
         const latest = res.data[0];
-        setData({
-          pm10: latest.DUST_PM10 || 0,
-          pm25: latest.DUST_PM25 || 0,
-          temp: latest.TEMP || 0,
-          hum: latest.HUM || 0,
-          nos: latest.NOS || 0,
-          // DB의 CREATE_AT 컬럼을 읽어오고 없으면 현재 시간 표시
-          time: latest.CREATE_AT ? new Date(latest.CREATE_AT).toLocaleString() : new Date().toLocaleTimeString()
-        });
+        // HomeData.js의 setData 부분
+      setData({
+        pm10: parseFloat(latest.DUST_PM10).toFixed(2), // 문자열을 숫자로 변환 후 소수점 고정
+        pm25: parseFloat(latest.DUST_PM25).toFixed(2),
+        temp: latest.TEMP,
+        hum: latest.HUM,
+        nos: latest.NOS,
+        time: new Date(latest.CREATE_AT).toLocaleString()
+});
       }
     } catch (e) {
       console.error("데이터 호출 에러:", e);
