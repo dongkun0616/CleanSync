@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-    # collector나 frontend 폴더에 변화가 있을 때만 실행
     paths:
       - 'collector/**'
       - 'frontend/**'
@@ -21,29 +20,29 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }} # secrets. 추가하여 오타 수정
+          key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-script: |
             cd ~/clean-sync
             git fetch origin main
             git reset --hard origin/main
 
             echo "Restarting Collector..."
-            # 기존 프로세스 종료 (실패해도 계속 진행)
+            # 기존 프로세스 종료
             pgrep -f mqtt_to_db.py | xargs kill -9 || true
             
             cd ~/clean-sync/collector
-            # nohup과 disown을 조합해 세션 독립
-            nohup python3 -u mqtt_to_db.py > collector.log 2>&1 & sleep 1
+            # nohup으로 실행하고 disown으로 SSH 세션과 분리
+            nohup python3 -u mqtt_to_db.py > collector.log 2>&1 &
+            sleep 2
             disown
 
             echo "Building Frontend..."
             cd ~/clean-sync/frontend/my-project
-            # 빌드 캐시 문제 방지 및 경고 무시
+            # 빌드 캐시 문제 및 경고 무시 설정
             CI=false npm install --no-audit --no-fund
             CI=false npm run build
 
             echo "Restarting Nginx..."
-            # Nginx 재시작 후 결과와 상관없이 0(성공) 반환하도록 설정
+            # Nginx 재시작
             sudo systemctl restart nginx || true
             echo "Deployment finished successfully!"
