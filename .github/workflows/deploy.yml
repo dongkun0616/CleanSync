@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'collector/**'
-      
+
 
 jobs:
   deploy:
@@ -23,7 +23,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/clean-sync
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main  # 이 줄이 핵심입니다! 강제로 깃허브와 똑같이 맞춥니다.
             pkill -f mqtt_to_db.py || true
             cd ~/clean-sync/collector
-            nohup python3 -u mqtt_to_db.py &
+            nohup python3 -u mqtt_to_db.py &  
