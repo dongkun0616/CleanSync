@@ -49,8 +49,12 @@ app.get("/test", (req, res) => {
 app.get("/home", (req, res) => {
   saveLog("/home API 호출 시작");
 
+  // 변경된 SQL: id 기준 내림차순 정렬 후, 가장 위 데이터 1개만 모든 컬럼(*) 선택
   const sql = `
-    SELECT id FROM home_status ORDER BY id DESC LIMIT 1
+    SELECT * 
+    FROM home_status 
+    ORDER BY id DESC 
+    LIMIT 1
   `;
 
   db.query(sql, (err, results) => {
@@ -60,7 +64,16 @@ app.get("/home", (req, res) => {
       return res.status(500).json({ error: "DB 조회 실패" });
     }
 
-    saveLog(`DB 조회 성공 (데이터 개수: ${results.length})`);
+    // 데이터가 없을 경우를 대비해 빈 배열 체크
+    if (results.length === 0) {
+      saveLog("DB 조회 성공: 데이터가 없음");
+      return res.json([]);
+    }
+
+    saveLog(`DB 조회 성공 (최신 데이터 ID: ${results[0].id})`);
+    
+    // 결과가 배열로 나오므로 그대로 보냅니다. 
+    // 프론트엔드에서는 data[0].TEMP 등으로 접근하게 됩니다.
     res.json(results);
   });
 });
