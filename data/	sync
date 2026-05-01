@@ -14,6 +14,9 @@ END$$
 DELIMITER ;
 
 통계 테이블 최신 상태
+DELETE FROM statistics_logs
+WHERE id <> (SELECT max_id FROM (SELECT MAX(id) AS max_id FROM statistics_logs) AS t);
+
 DELIMITER $$
 
 CREATE TRIGGER keep_latest_statistics
