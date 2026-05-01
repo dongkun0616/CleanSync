@@ -1,4 +1,4 @@
-트리거 생성
+동기화 트리거 생성
 DELIMITER $$
 
 CREATE TRIGGER after_insert_home_status
@@ -13,15 +13,18 @@ END$$
 
 DELIMITER ;
 
-동기화
-DELETE FROM home_status
-WHERE id <> 1;
+통계 테이블 최신 상태
+DELIMITER $$
 
-INSERT INTO home_status
-(id, DUST_PM10, DUST_PM25, TEMP, HUM, NOS, CREATE_AT, DST, CST, CS, WIFI_COUNT, location)
-VALUES
-(1, 0.00, 0.00, 0.00, 0.00, 0.00, CURRENT_TIMESTAMP, NULL, NULL, NULL, 0, '동아리방')
-ON DUPLICATE KEY UPDATE id = id;
+CREATE TRIGGER keep_latest_statistics
+AFTER INSERT ON statistics_logs
+FOR EACH ROW
+BEGIN
+    DELETE FROM statistics_logs
+    WHERE id <> NEW.id;
+END$$
+
+DELIMITER ;
 
 가상의 센서 데이터
 INSERT INTO statistics_logs
