@@ -36,10 +36,10 @@ app.get("/", (req, res) => {
   res.send("서버 정상 작동 중입니다. /test 또는 /home으로 접속하세요.");
 });
 
-// 테스트 API 배포1
+// 테스트 API
 app.get("/test", (req, res) => {
   saveLog("/test API 호출");
-  res.json({ message: "서버 정상 작동" });
+  res.json({ message: "API 정상 작동" });
 });
 
 // 홈 데이터 조회 API
