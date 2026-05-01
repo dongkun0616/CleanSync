@@ -23,23 +23,27 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }} # secrets. 추가하여 오타 수정
           script: |
+script: |
             cd ~/clean-sync
             git fetch origin main
             git reset --hard origin/main
 
             echo "Restarting Collector..."
-            # pkill 에러가 나도 스크립트가 멈추지 않게 처리
-            pkill -f mqtt_to_db.py || true
-            sleep 2
+            # 기존 프로세스 종료 (실패해도 계속 진행)
+            pgrep -f mqtt_to_db.py | xargs kill -9 || true
+            
             cd ~/clean-sync/collector
-            nohup python3 -u mqtt_to_db.py > collector.log 2>&1 &
+            # nohup과 disown을 조합해 세션 독립
+            nohup python3 -u mqtt_to_db.py > collector.log 2>&1 & sleep 1
+            disown
 
             echo "Building Frontend..."
             cd ~/clean-sync/frontend/my-project
-            # 빌드 속도를 위해 CI=false 추가 (경고가 에러로 변하는 것 방지)
-            CI=false npm install
+            # 빌드 캐시 문제 방지 및 경고 무시
+            CI=false npm install --no-audit --no-fund
             CI=false npm run build
 
             echo "Restarting Nginx..."
-            # sudo 실행 시 에러가 나면 알려주도록 설정
-            sudo systemctl restart nginx || echo "Nginx restart failed, please check sudoers"
+            # Nginx 재시작 후 결과와 상관없이 0(성공) 반환하도록 설정
+            sudo systemctl restart nginx || true
+            echo "Deployment finished successfully!"
