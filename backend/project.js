@@ -37,7 +37,7 @@ app.get("/", (req, res) => {
 });
 
 // 테스트 API
-app.get("/test", (req, res) => {
+app.get("/test1", (req, res) => {
   saveLog("/test API 호출");
   res.json({ message: "API 정상 작동" });
 });
