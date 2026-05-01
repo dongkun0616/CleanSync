@@ -81,6 +81,7 @@ client = mqtt.Client(CallbackAPIVersion.VERSION2)
 client.on_connect = on_connect
 client.on_message = on_message
 
+#ㅇㅅㅇ
 print("🚀 AWS 수집 서버 가동 중 (한국 시간 보정 모드)...")
 
 if not DB_CONFIG['host']:
