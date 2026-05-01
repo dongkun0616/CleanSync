@@ -1,20 +1,17 @@
 트리거 생성
-CREATE TRIGGER after_insert_statistics_logs
-AFTER INSERT ON statistics_logs
+DELIMITER $$
+
+CREATE TRIGGER after_insert_home_status
+AFTER INSERT ON home_status
 FOR EACH ROW
 BEGIN
-    UPDATE home_status
-    SET
-        DUST_PM10 = NEW.DUST_PM10,
-        DUST_PM25 = NEW.DUST_PM25,
-        TEMP = NEW.TEMP,
-        HUM = NEW.HUM,
-        NOS = NEW.NOS,
-        DST = NEW.DST,
-        CREATE_AT = NEW.CREATE_AT,
-        location = NEW.location
-    WHERE id = 1;
-END;
+    INSERT INTO statistics_logs
+    (DUST_PM10, DUST_PM25, TEMP, HUM, NOS, DST, CREATE_AT, location)
+    VALUES
+    (NEW.DUST_PM10, NEW.DUST_PM25, NEW.TEMP, NEW.HUM, NEW.NOS, NEW.DST, NEW.CREATE_AT, NEW.location);
+END$$
+
+DELIMITER ;
 
 동기화
 DELETE FROM home_status
