@@ -11,7 +11,7 @@ function saveLog(message) {
   const log = `[${new Date().toISOString()}] ${message}\n`;
   fs.appendFileSync("log.txt", log);
 }
-
+//히히
 // ================== DB 연결 ==================
 const db = mysql.createConnection({
   host: process.env.DB_HOST,
