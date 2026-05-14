@@ -47,3 +47,10 @@ CREATE TABLE app_settings (
     CS INT NULL DEFAULT NULL,
     PRIMARY KEY (setting_id)
 );
+
+# CO2, SPACE_SCORE 컬럼명 추가
+ALTER TABLE home_status
+ADD SPACE_SCORE INT;
+
+ALTER TABLE statistics_logs
+ADD SPACE_SCORE INT;
