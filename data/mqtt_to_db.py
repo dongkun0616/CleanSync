@@ -160,9 +160,14 @@ def on_message(client, userdata, msg):
                     WIFI_COUNT,
                     location,
                     CO2,
-                    SPACE_SCORE
+                    SPACE_SCORE,
+                    TEMP,
+                    HUM,
+                    DUST_PM10,
+                    DUST_PM25,
+                    NOS
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
 
             values = (
@@ -171,10 +176,16 @@ def on_message(client, userdata, msg):
                 cst,              # CST
                 cs,               # CS
                 0,                # WIFI_COUNT
-                "동아리방",        # location
+                "동아리방",       # location
                 co2,              # CO2
-                space_score       # SPACE_SCORE
-            )
+                space_score,      # SPACE_SCORE
+                temp,             # TEMP  
+                hum,              # HUM
+                pm10,             # DUST_PM10
+                pm25,             # DUST_PM25
+                noise             # NOS
+                
+                )
 
             cursor.execute(sql, values)
 
