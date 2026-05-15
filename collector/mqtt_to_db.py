@@ -167,7 +167,7 @@ def on_message(client, userdata, msg):
                     DUST_PM25,
                     NOS
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
 
             values = (
