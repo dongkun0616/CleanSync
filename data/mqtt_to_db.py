@@ -151,7 +151,7 @@ def on_message(client, userdata, msg):
         with conn.cursor() as cursor:
 
             sql = """
-                INSERT INTO hoSSme_status
+                INSERT INTO home_status
                 (
                     CREATE_AT,
                     DST,
