@@ -5,8 +5,6 @@ const fs = require("fs");
 require("dotenv").config();
 
 const app = express();
-app.use(express.json());
-
 app.use(cors());
 app.use(express.json());
 
@@ -44,7 +42,7 @@ app.get("/", (req, res) => {
 // 테스트 API
 app.get("/test", (req, res) => {
   saveLog("/test API 호출");
-  res.json({ message: "API 정상 작동" });
+  res.json({ message: "서버 정상 작동" });
 });
 
 // 홈 데이터 조회 API
