@@ -1,0 +1,48 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'collector/**'
+      - 'frontend/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: SSH Remote Commands (Deploy & Build)
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/clean-sync
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "Restarting Collector..."
+            # 기존 프로세스 종료
+            pgrep -f mqtt_to_db.py | xargs kill -9 || true
+            
+            cd ~/clean-sync/collector
+            # nohup으로 실행하고 disown으로 SSH 세션과 분리
+            nohup python3 -u mqtt_to_db.py > collector.log 2>&1 &
+            sleep 2
+            disown
+
+            echo "Building Frontend..."
+            cd ~/clean-sync/frontend/my-project
+            # 빌드 캐시 문제 및 경고 무시 설정
+            CI=false npm install --no-audit --no-fund
+            CI=false npm run build
+
+            echo "Restarting Nginx..."
+            # Nginx 재시작
+            sudo systemctl restart nginx || true
+            echo "Deployment finished successfully!"
