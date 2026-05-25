@@ -1,0 +1,70 @@
+동기화 트리거 생성
+DELIMITER $$
+
+CREATE TRIGGER after_insert_home_status
+AFTER INSERT ON home_status
+FOR EACH ROW
+BEGIN
+    INSERT INTO statistics_logs
+    (
+        DUST_PM10,
+        DUST_PM25,
+        TEMP,
+        HUM,
+        NOS,
+        CO2,
+        SPACE_SCORE,
+        DST,
+        CREATE_AT,
+        location
+    )
+    VALUES
+    (
+        NEW.DUST_PM10,
+        NEW.DUST_PM25,
+        NEW.TEMP,
+        NEW.HUM,
+        NEW.NOS,
+        NEW.CO2,
+        NEW.SPACE_SCORE,
+        NEW.DST,
+        NEW.CREATE_AT,
+        NEW.location
+    );
+END$$
+
+DELIMITER ;
+
+통계 테이블 최신 상태
+DELETE FROM statistics_logs
+WHERE id <> (SELECT max_id FROM (SELECT MAX(id) AS max_id FROM statistics_logs) AS t);
+
+DELIMITER $$
+
+CREATE TRIGGER keep_latest_statistics
+AFTER INSERT ON statistics_logs
+FOR EACH ROW
+BEGIN
+    DELETE FROM statistics_logs
+    WHERE id <> NEW.id;
+END$$
+
+DELIMITER ;
+
+가상의 센서 데이터
+INSERT INTO statistics_logs
+(DUST_PM10, DUST_PM25, TEMP, HUM, NOS, DST, CREATE_AT, location)
+VALUES
+(42.50, 18.30, 24.80, 51.20, 58.40, '보통', CURRENT_TIMESTAMP, '동아리방');
+
+UPDATE home_status
+SET
+    DUST_PM10 = 42.50,
+    DUST_PM25 = 18.30,
+    TEMP = 24.80,
+    HUM = 51.20,
+    NOS = 58.40,
+    DST = '보통',
+    CREATE_AT = CURRENT_TIMESTAMP,
+    location = '동아리방'
+WHERE id = 1;

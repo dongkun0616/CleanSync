@@ -1,0 +1,4 @@
+# 인덱싱
+
+CREATE INDEX idx_statistics_create_at
+ON statistics_logs(CREATE_AT);
