@@ -1,228 +1,494 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler
 } from 'chart.js';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
-const DashboardPage = () => {
-  // 실시간 가상 데이터 상태 관리
-  const [sensorData, setSensorData] = useState({
-    score: 88, status: '매우 쾌적', co2: 846, noise: 43, temp: 22.3, humi: 52, pm10: 18,
-  });
-
-  // 각 그래프별 최근 30분 추이 데이터 배열
-  const [chartDataList, setChartDataList] = useState({
-    co2: Array(15).fill(0).map(() => Math.floor(Math.random() * (855 - 835) + 835)),
-    noise: Array(15).fill(0).map(() => Math.floor(Math.random() * (45 - 41) + 41)),
-    temp: Array(15).fill(0).map(() => parseFloat((Math.random() * (22.5 - 22.1) + 22.1).toFixed(1))),
-    humi: Array(15).fill(0).map(() => Math.floor(Math.random() * (54 - 50) + 50)),
-    pm10: Array(15).fill(0).map(() => Math.floor(Math.random() * (19 - 17) + 17)),
-  });
-
-  const getChartOptions = (min, max) => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: { y: { display: false, min, max }, x: { display: false } },
-    plugins: { legend: { display: false }, tooltip: { enabled: true } },
-    elements: {
-      line: { tension: 0.4, borderWidth: 2.5 },
-      point: { radius: 0, hoverRadius: 4 }
-    }
-  });
+// ── 파티클 배경 ─────────────────────────────────────────────────
+const ParticleBg = ({ color }) => {
+  const canvasRef = useRef(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const nextCO2 = Math.floor(Math.random() * (855 - 835 + 1)) + 835;
-      const nextNoise = Math.floor(Math.random() * (45 - 41 + 1)) + 41;
-      const nextTemp = parseFloat((Math.random() * (22.5 - 22.1) + 22.1).toFixed(1));
-      const nextHumi = Math.floor(Math.random() * (54 - 50 + 1)) + 50;
-      const nextPm10 = Math.floor(Math.random() * (19 - 17 + 1)) + 17;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let raf;
 
-      setSensorData({ score: 88, status: '매우 쾌적', co2: nextCO2, noise: nextNoise, temp: nextTemp, humi: nextHumi, pm10: nextPm10 });
-      
-      setChartDataList(prev => ({
-        co2: [...prev.co2, nextCO2].slice(-15),
-        noise: [...prev.noise, nextNoise].slice(-15),
-        temp: [...prev.temp, nextTemp].slice(-15),
-        humi: [...prev.humi, nextHumi].slice(-15),
-        pm10: [...prev.pm10, nextPm10].slice(-15),
-      }));
-    }, 3000);
+    const resize = () => {
+      canvas.width  = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const NUM = 28;
+    const particles = Array.from({ length: NUM }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 5 + 2,
+      dx: (Math.random() - 0.5) * 0.3,
+      dy: (Math.random() - 0.5) * 0.3,
+      alpha: Math.random() * 0.25 + 0.05,
+    }));
+
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p) => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = color + Math.floor(p.alpha * 255).toString(16).padStart(2, '0');
+        ctx.fill();
+        p.x += p.dx;
+        p.y += p.dy;
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
+      });
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+    };
+  }, [color]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}
+    />
+  );
+};
+
+// ── 글래스모피즘 미니 센서 카드 ───────────────────────────────────────────────────
+const GlassMiniCard = ({ icon, label, value, unit, color }) => (
+  <div style={{
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    backdropFilter: 'blur(12px)',
+    borderRadius: '16px',
+    padding: '16px 20px',
+    border: '1px solid rgba(255,255,255,0.6)',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+  }}>
+    <div style={{
+      width: '42px', height: '42px', borderRadius: '10px',
+      backgroundColor: color + '18',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: '22px', flexShrink: 0,
+    }}>{icon}</div>
+    <div>
+      <div style={{ fontSize: '11px', color: '#8FA3B1', fontWeight: '600', marginBottom: '3px', letterSpacing: '0.5px' }}>
+        {label}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px' }}>
+        <span style={{ fontSize: '24px', fontWeight: '800', color: '#1A202C', fontFamily: "'DM Mono', monospace" }}>
+          {value}
+        </span>
+        <span style={{ fontSize: '12px', color: '#8FA3B1', fontWeight: '600' }}>{unit}</span>
+      </div>
+    </div>
+  </div>
+);
+
+// ── 메인 대시보드 컴포넌트 ────────────────────────────────────────────────
+const DashboardPage = () => {
+  const navigate = useNavigate(); 
+  const location = useLocation(); 
+
+  const [isConnected, setIsConnected] = useState(false);
+  const [sensorData, setSensorData] = useState({
+    score: 0, displayScore: 0, statusText: '로딩 중...', co2: 0, noise: 0, temperature: 0, humidity: 0, dustPm10: 0, dustPm25: 0
+  });
+
+  const [chartDataList, setChartDataList] = useState({
+    co2: [], noise: [], temp: [], humi: [], pm10: [], pm25: [], times: []
+  });
+
+  const [rawLogs, setRawLogs] = useState([]);
+  const [lastUpdate, setLastUpdate] = useState(null);
+
+  const [activeTab, setActiveTab] = useState('co2');
+  const [dustMode, setDustMode] = useState('pm10');
+
+  const fetchData = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard`);
+      const result = await response.json();
+
+      if (result && result.success && result.data) {
+        setIsConnected(true);
+        const { current, charts } = result.data;
+
+        if (current) {
+          const rawScore = Number(current.score || 0);
+          const scaledScore = rawScore > 100 ? Math.round(rawScore / 10) : rawScore;
+
+          setSensorData({
+            score: scaledScore,
+            displayScore: rawScore,
+            statusText: current.statusText || '여유',
+            co2: Number(current.co2 || 0),
+            noise: Number(current.noise || 0),
+            temperature: Number(current.temperature || 0),
+            humidity: Number(current.humidity || 0),
+            dustPm10: Number(current.dustPm10 || 0),
+            dustPm25: Number(current.dustPm25 || 0)
+          });
+          setLastUpdate(new Date());
+        }
+
+        if (Array.isArray(charts)) {
+          setRawLogs(charts);
+          setChartDataList({
+            co2: charts.map(d => Number(d.co2 || 0)),
+            noise: charts.map(d => Number(d.noise || 0)),
+            temp: charts.map(d => Number(d.temperature || 0)),
+            humi: charts.map(d => Number(d.humidity || 0)),
+            pm10: charts.map(d => Number(d.dustPm10 || 0)),
+            pm25: charts.map(d => Number(d.dustPm25 || 0)),
+            times: charts.map(d => d.time || ''),
+          });
+        }
+      } else {
+        setIsConnected(false);
+      }
+    } catch (error) {
+      setIsConnected(false);
+      console.error('대시보드 트렌드 모니터 장애:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  const createChartData = (dataArray, borderColor, bgColor) => ({
-    labels: Array(dataArray.length).fill(''),
-    datasets: [{ fill: true, data: dataArray, borderColor: borderColor, backgroundColor: bgColor }],
-  });
+  const getTheme = (score) => {
+    if (score >= 80) return { color: '#10B981', bg: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)' };
+    if (score >= 60) return { color: '#F59E0B', bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
+    return { color: '#EF4444', bg: 'linear-gradient(135deg, #FEE2E2 0%, #FFF5F5 100%)' };
+  };
+  const theme = getTheme(sensorData.score);
 
-  // 스타일 설정 (외부 CSS 간섭 원천 봉쇄)
-  const styles = {
-    wrapper: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', display: 'flex', backgroundColor: '#FFFFFF', textAlign: 'left', zIndex: 99999, fontFamily: '"Pretendard", sans-serif', boxSizing: 'border-box' },
+  const formatTime = (d) => d
+    ? `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`
+    : '--:--:--';
+
+  const formatLogTime = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+  };
+
+  const formatChartTime = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const generateChartConfig = () => {
+    const labels = chartDataList.times.map(t => formatChartTime(t));
     
-    // 좌측 다크 네이비 사이드바
-    sidebar: { width: '280px', minWidth: '280px', height: '100%', backgroundColor: '#161C2D', color: '#FFFFFF', padding: '24px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', borderRight: '1px solid #242D42' },
-    logoSection: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px' },
-    logoIcon: { width: '32px', height: '32px', backgroundColor: '#3B82F6', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px' },
-    logoText: { fontSize: '18px', fontWeight: '700' },
-    
-    sidebarScoreCard: { backgroundColor: '#1F283D', borderRadius: '12px', padding: '20px', marginBottom: '32px', border: '1px solid #2D3954' },
-    sidebarScoreHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px', color: '#8F9BB3', marginBottom: '12px' },
-    sidebarScoreValue: { fontSize: '46px', fontWeight: '800', color: '#FFFFFF', margin: 0 },
-    sidebarStatusText: { fontSize: '16px', color: '#10B981', fontWeight: '600', marginTop: '8px' },
-    
-    navContainer: { display: 'flex', flexDirection: 'column', gap: '4px', flexGrow: 1 },
-    navItem: { display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', color: '#707E94', borderRadius: '8px', fontSize: '14px', fontWeight: '600' },
-    navItemActive: { display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', backgroundColor: '#28334E', color: '#4393F9', borderRadius: '8px', fontWeight: '700', fontSize: '14px' },
+    if (activeTab === 'co2') {
+      return {
+        labels,
+        datasets: [{
+          label: '이산화탄소 (ppm)',
+          data: chartDataList.co2,
+          borderColor: theme.color,
+          backgroundColor: theme.color + '12',
+          fill: true, tension: 0.38, borderWidth: 3, pointRadius: 2
+        }]
+      };
+    }
+    if (activeTab === 'noise') {
+      return {
+        labels,
+        datasets: [{
+          label: '소음 (dB)',
+          data: chartDataList.noise,
+          borderColor: '#4393F9',
+          backgroundColor: 'rgba(67, 147, 249, 0.08)',
+          fill: true, tension: 0.38, borderWidth: 3, pointRadius: 2
+        }]
+      };
+    }
+    if (activeTab === 'temphumi') {
+      return {
+        labels,
+        datasets: [
+          { label: '온도 (°C)', data: chartDataList.temp, borderColor: '#EF4444', backgroundColor: 'transparent', tension: 0.4, borderWidth: 2.5, yAxisID: 'y', pointRadius: 1 },
+          { label: '습도 (%)', data: chartDataList.humi, borderColor: '#3B82F6', backgroundColor: 'transparent', tension: 0.4, borderWidth: 2.5, yAxisID: 'y1', pointRadius: 1 }
+        ]
+      };
+    }
+    if (activeTab === 'dust') {
+      const isPm10 = dustMode === 'pm10';
+      return {
+        labels,
+        datasets: [{
+          label: isPm10 ? '미세먼지 PM10 (㎍/㎥)' : '초미세먼지 PM2.5 (㎍/㎥)',
+          data: isPm10 ? chartDataList.pm10 : chartDataList.pm25,
+          borderColor: isPm10 ? '#8B5CF6' : '#EC4899',
+          backgroundColor: isPm10 ? 'rgba(139, 92, 246, 0.08)' : 'rgba(236, 72, 153, 0.08)',
+          fill: true, tension: 0.38, borderWidth: 3, pointRadius: 2
+        }]
+      };
+    }
+    return { labels: [], datasets: [] };
+  };
 
-    // 우측 메인 콘텐츠 영역
-    mainPanel: { flex: 1, height: '100%', overflowY: 'auto', padding: '40px 48px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', backgroundColor: '#FAFCFF' },
-    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', width: '100%' },
-    headerTitle: { fontSize: '28px', fontWeight: '800', margin: 0, color: '#1A202C' },
-    headerSubtitle: { fontSize: '14px', color: '#90A0B7', margin: '4px 0 0 0' },
-    topLiveBadges: { display: 'flex', alignItems: 'center', gap: '8px' },
-    topLiveBtn: { backgroundColor: '#F0F9F4', color: '#137333', padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', border: '1px solid #D5ECD9' },
-    topScoreBtn: { backgroundColor: '#EBF5FF', color: '#1E40AF', padding: '6px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', border: '1px solid #CCE3FF' },
-
-    // 3열 레이아웃 (CO2, 소음, 온도)
-    mainGridTop: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '24px', width: '100%', boxSizing: 'border-box' },
-    
-    largeSensorCard: (topBorderColor) => ({
-      backgroundColor: '#FFFFFF', borderRadius: '12px', padding: '28px', border: '1px solid #E4EBF4', borderTop: `4px solid ${topBorderColor}`, boxSizing: 'border-box', display: 'flex', flexDirection: 'column'
-    }),
-    largeCardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '15px', color: '#718096', fontWeight: '600', marginBottom: '12px' },
-    largeCardValue: { fontSize: '56px', fontWeight: '800', color: '#1A202C', margin: 0, lineHeight: 1, letterSpacing: '-1px' },
-    largeCardUnit: { fontSize: '18px', color: '#90A0B7', fontWeight: 'normal', marginLeft: '6px' },
-    largeChartContainer: { height: '110px', marginTop: '16px', width: '100%' },
-
-    // 2열 레이아웃 (습도, 미세먼지)
-    mainGridBottom: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', width: '100%', boxSizing: 'border-box', marginBottom: '28px' },
-
-    // 💎 [위치 수정 완벽 반영] 모든 센서 그래프 아래 배치될 수평 요약 바
-    horizontalSummaryBar: { 
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '18px 36px', borderRadius: '14px', border: '1px solid #E4EBF4', width: '100%', boxSizing: 'border-box', boxShadow: '0 4px 14px rgba(0,0,0,0.015)'
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: activeTab === 'temphumi', position: 'top', labels: { font: { family: 'Pretendard' } } },
+      tooltip: { enabled: true, mode: 'index', intersect: false, boxPadding: 6 }
     },
-    summaryItem: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: '600', color: '#4A5568' },
-    summaryDot: (color) => ({ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: color }),
-    summaryValue: { color: '#1A202C', fontWeight: '800', marginLeft: '6px', fontSize: '16px' }
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#94A3B8', font: { size: 11, family: 'DM Mono' } } },
+      y: { type: 'linear', display: true, position: 'left', grid: { color: 'rgba(0,0,0,0.03)' }, ticks: { color: '#64748B', font: { family: 'DM Mono' } } },
+      ...(activeTab === 'temphumi' ? {
+        y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#3B82F6', font: { family: 'DM Mono' } } }
+      } : {})
+    }
   };
 
   return (
-    <div style={styles.wrapper}>
-      {/* 1. 좌측 다크 네이비 사이드바 영역 */}
-      <aside style={styles.sidebar}>
-        <div style={styles.logoSection}>
-          <div style={styles.logoIcon}>⚡</div>
+    <div style={{
+      position: 'fixed', inset: 0, width: '100%', height: '100%',
+      display: 'flex', fontFamily: "'Pretendard', sans-serif",
+      boxSizing: 'border-box',
+    }}>
+      <style>{`
+        @import url('https://webfontworld.github.io/pretendard/Pretendard.css');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+        * { font-family: 'Pretendard', sans-serif; }
+      `}</style>
+
+      {/* ── 사이드바 ── */}
+      <aside style={{
+        width: '230px', minWidth: '230px', height: '100%',
+        background: 'linear-gradient(180deg, #0F1623 0%, #161C2D 100%)',
+        color: '#FFF', padding: '28px 20px', boxSizing: 'border-box',
+        display: 'flex', flexDirection: 'column',
+        borderRight: '1px solid rgba(255,255,255,0.06)',
+        zIndex: 10
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
+          <div style={{
+            width: '36px', height: '36px', borderRadius: '10px',
+            background: `linear-gradient(135deg, ${theme.color}, ${theme.color}88)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '18px', boxShadow: `0 4px 12px ${theme.color}44`,
+          }}>⚡</div>
           <div>
-            <span style={styles.logoText}>Clean-Sync</span>
-            <span style={{fontSize:'11px', color:'#6B7A99', display:'block', marginTop:'2px'}}>학습 환경 모니터</span>
+            <div style={{ fontSize: '17px', fontWeight: '700', letterSpacing: '-0.3px' }}>Clean-Sync</div>
+            <div style={{ fontSize: '10px', color: '#6B7A99', marginTop: '1px' }}>학습 환경 모니터</div>
           </div>
         </div>
 
-        <div style={styles.sidebarScoreCard}>
-          <div style={styles.sidebarScoreHeader}>
-            <span>학습 지수</span>
-            <div style={{color:'#10B981', fontWeight:'bold', fontSize:'12px'}}>● LIVE</div>
+        <div style={{
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '14px', padding: '18px', marginBottom: '24px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <span style={{ fontSize: '12px', color: '#6B7A99', fontWeight: '600' }}>종합 지수</span>
+            <span style={{ fontSize: '11px', color: isConnected ? '#10B981' : '#EF4444', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isConnected ? '#10B981' : '#EF4444', display: 'inline-block' }} />
+              {isConnected ? 'LIVE' : 'OFFLINE'}
+            </span>
           </div>
-          <h2 style={styles.sidebarScoreValue}>
-            {sensorData.score}<span style={{fontSize:'18px', color:'#6B7A99', fontWeight:'normal'}}> / 100</span>
-          </h2>
-          <div style={styles.sidebarStatusText}>{sensorData.status}</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+            <span style={{ fontSize: '38px', fontWeight: '800', color: theme.color, lineHeight: 1, fontFamily: "'DM Mono', monospace", transition: 'all 0.5s ease' }}>
+              {sensorData.displayScore}
+            </span>
+          </div>
+          <div style={{ fontSize: '14px', color: theme.color, fontWeight: '700', marginTop: '8px' }}>
+            {sensorData.statusText}
+          </div>
         </div>
 
-        <nav style={styles.navContainer}>
-          <div style={styles.navItem}>🏠 홈</div>
-          <div style={styles.navItemActive}>📊 대시보드</div>
-          <div style={styles.navItem}>📈 통계</div>
-          <div style={styles.navItem}>⚙️ 설정</div>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+          {[
+            { icon: '🏠', label: '홈', sub: '현재 상태', path: '/' },
+            { icon: '📊', label: '대시보드', sub: '실시간 센서', path: '/dashboard' },
+            { icon: '📈', label: '통계', sub: '기록 분석', path: '/analytics' }, 
+            { icon: '⚙️', label: '설정', sub: '환경 설정', path: '/settings' },
+          ].map(({ icon, label, sub, path }) => {
+            const isActive = location.pathname === path;
+            return (
+              <div key={label} onClick={() => navigate(path)} style={{
+                display: 'flex', alignItems: 'center', gap: '12px',
+                padding: '12px 14px', borderRadius: '10px', cursor: 'pointer',
+                background: isActive ? `linear-gradient(90deg, ${theme.color}22, transparent)` : 'transparent',
+                borderLeft: isActive ? `3px solid ${theme.color}` : '3px solid transparent',
+                transition: 'all 0.2s ease',
+              }}>
+                <span style={{ fontSize: '18px' }}>{icon}</span>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: isActive ? '700' : '500', color: isActive ? '#FFF' : '#6B7A99' }}>{label}</div>
+                  <div style={{ fontSize: '10px', color: '#4A5568', marginTop: '1px' }}>{sub}</div>
+                </div>
+              </div>
+            );
+          })}
         </nav>
+
+        <div style={{ fontSize: '10px', color: '#3D4F6E', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          마지막 업데이트 {formatTime(lastUpdate)}
+        </div>
       </aside>
 
-      {/* 2. 우측 메인 판넬 영역 */}
-      <main style={styles.mainPanel}>
-        <header style={styles.header}>
+      <main style={{
+        flex: 1, position: 'relative', overflowY: 'auto',
+        background: theme.bg, transition: 'background 0.8s ease',
+        display: 'flex', flexDirection: 'column', gap: '20px', padding: '32px 40px',
+        boxSizing: 'border-box'
+      }}>
+        <ParticleBg color={theme.color} />
+
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 style={styles.headerTitle}>실시간 대시보드</h1>
-            <p style={styles.headerSubtitle}>모든 센서 수치를 한눈에 비교 분석합니다</p>
+            <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#1A202C', margin: 0, letterSpacing: '-0.5px' }}>실시간 분석 대시보드</h2>
+            <p style={{ fontSize: '13px', color: '#64748B', margin: '4px 0 0 0' }}>실시간 유입되는 센서 정보와 트렌드 이력을 깨끗한 글래스 가이드 뷰로 확인하세요.</p>
           </div>
-          <div style={styles.topLiveBadges}>
-            <div style={styles.topLiveBtn}>📡 LIVE</div>
-            <div style={styles.topScoreBtn}>✨ {sensorData.score} / 100</div>
-          </div>
-        </header>
-
-        {/* 3. 상단 3열 센서 그래프 카드 그룹 (CO2 | 소음 | 온도) */}
-        <div style={styles.mainGridTop}>
-          <div style={styles.largeSensorCard('#F59E0B')}>
-            <div style={styles.largeCardHeader}>
-              <span>💨 CO₂ <span style={{fontSize:'11px', color:'#90A0B7', fontWeight:'normal', marginLeft:'6px'}}>최근 30분</span></span>
-              <span style={{color: '#D97706', fontSize: '13px', fontWeight: 'bold'}}>주의</span>
-            </div>
-            <h2 style={styles.largeCardValue}>{sensorData.co2}<span style={styles.largeCardUnit}>ppm</span></h2>
-            <div style={styles.largeChartContainer}>
-              <Line data={createChartData(chartDataList.co2, '#F59E0B', 'rgba(245, 158, 11, 0.03)')} options={getChartOptions(400, 950)} />
-            </div>
-          </div>
-
-          <div style={styles.largeSensorCard('#10B981')}>
-            <div style={styles.largeCardHeader}>
-              <span>🔊 소음 <span style={{fontSize:'11px', color:'#90A0B7', fontWeight:'normal', marginLeft:'6px'}}>최근 30분</span></span>
-              <span style={{color: '#10B981', fontSize: '13px', fontWeight: 'bold'}}>양호</span>
-            </div>
-            <h2 style={styles.largeCardValue}>{sensorData.noise}<span style={styles.largeCardUnit}>dB</span></h2>
-            <div style={styles.largeChartContainer}>
-              <Line data={createChartData(chartDataList.noise, '#10B981', 'rgba(16, 185, 129, 0.03)')} options={getChartOptions(30, 60)} />
-            </div>
-          </div>
-
-          <div style={styles.largeSensorCard('#10B981')}>
-            <div style={styles.largeCardHeader}>
-              <span>🌡️ 온도 <span style={{fontSize:'11px', color:'#90A0B7', fontWeight:'normal', marginLeft:'6px'}}>최근 30분</span></span>
-              <span style={{color: '#10B981', fontSize: '13px', fontWeight: 'bold'}}>양호</span>
-            </div>
-            <h2 style={styles.largeCardValue}>{sensorData.temp}<span style={styles.largeCardUnit}>°C</span></h2>
-            <div style={styles.largeChartContainer}>
-              <Line data={createChartData(chartDataList.temp, '#10B981', 'rgba(16, 185, 129, 0.03)')} options={getChartOptions(15, 30)} />
-            </div>
+          <div style={{ 
+            backgroundColor: isConnected ? 'rgba(255,255,255,0.6)' : 'rgba(239, 68, 68, 0.1)', 
+            padding: '6px 14px', borderRadius: '30px', fontSize: '12px', fontWeight: 'bold', 
+            color: isConnected ? theme.color : '#EF4444', 
+            border: isConnected ? '1px solid rgba(255,255,255,0.8)' : '1px solid #FECACA' 
+          }}>
+            {isConnected ? '📊 데이터 실시간 동기화 완료' : '⚠️ 연결 끊김 (서버 확인 필요)'}
           </div>
         </div>
 
-        {/* 4. 중단 2열 센서 그래프 카드 그룹 (습도 | 미세먼지) */}
-        <div style={styles.mainGridBottom}>
-          <div style={styles.largeSensorCard('#10B981')}>
-            <div style={styles.largeCardHeader}>
-              <span>💧 습도 <span style={{fontSize:'11px', color:'#90A0B7', fontWeight:'normal', marginLeft:'6px'}}>최근 30분</span></span>
-              <span style={{color: '#10B981', fontSize: '13px', fontWeight: 'bold'}}>양호</span>
+        <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
+          <GlassMiniCard icon="🌡️" label="온도" value={sensorData.temperature} unit="°C" color={theme.color} />
+          <GlassMiniCard icon="💧" label="습도" value={sensorData.humidity} unit="%" color={theme.color} />
+          <GlassMiniCard icon="💨" label="이산화탄소" value={sensorData.co2} unit="ppm" color={theme.color} />
+          <GlassMiniCard icon="🔊" label="소음" value={sensorData.noise} unit="dB" color={theme.color} />
+          <GlassMiniCard icon="😷" label="미세먼지(PM10)" value={sensorData.dustPm10} unit="㎍/㎥" color={theme.color} />
+        </div>
+
+        <div style={{
+          position: 'relative', zIndex: 1,
+          backgroundColor: 'rgba(255,255,255,0.82)',
+          backdropFilter: 'blur(16px)',
+          borderRadius: '20px', padding: '24px',
+          border: '1px solid rgba(255,255,255,0.7)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
+          display: 'flex', flexDirection: 'column'
+        }}>
+          {/* ... (차트 및 로그 테이블 부분 기존 동일) */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: theme.color, display: 'inline-block' }} />
+              <span style={{ fontSize: '15px', fontWeight: '700', color: '#1E293B' }}>센서 지표별 트렌드 추이</span>
             </div>
-            <h2 style={styles.largeCardValue}>{sensorData.humi}<span style={styles.largeCardUnit}>%</span></h2>
-            <div style={styles.largeChartContainer}>
-              <Line data={createChartData(chartDataList.humi, '#10B981', 'rgba(16, 185, 129, 0.03)')} options={getChartOptions(30, 70)} />
+            <div style={{ display: 'flex', backgroundColor: 'rgba(0,0,0,0.04)', padding: '3px', borderRadius: '10px', gap: '2px' }}>
+              {[
+                { id: 'co2', label: 'CO₂' },
+                { id: 'noise', label: '소음' },
+                { id: 'temphumi', label: '온도·습도' },
+                { id: 'dust', label: '미세먼지' }
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    padding: '6px 14px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '700',
+                    backgroundColor: activeTab === tab.id ? '#FFFFFF' : 'transparent',
+                    color: activeTab === tab.id ? '#1E293B' : '#64748B',
+                    boxShadow: activeTab === tab.id ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
             </div>
           </div>
-
-          <div style={styles.largeSensorCard('#F59E0B')}>
-            <div style={styles.largeCardHeader}>
-              <span>☁️ 미세먼지 <span style={{fontSize:'11px', color:'#90A0B7', fontWeight:'normal', marginLeft:'6px'}}>최근 30분</span></span>
-              <span style={{color: '#D97706', fontSize: '13px', fontWeight: 'bold'}}>주의</span>
+          {activeTab === 'dust' && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', gap: '6px' }}>
+              <button
+                onClick={() => setDustMode('pm10')}
+                style={{
+                  padding: '4px 12px', borderRadius: '20px', border: dustMode === 'pm10' ? `1px solid ${theme.color}` : '1px solid rgba(0,0,0,0.1)',
+                  backgroundColor: dustMode === 'pm10' ? '#FFFFFF' : 'transparent',
+                  color: dustMode === 'pm10' ? theme.color : '#64748B', fontSize: '11px', fontWeight: '700', cursor: 'pointer'
+                }}
+              >● 미세먼지 (PM10)</button>
+              <button
+                onClick={() => setDustMode('pm25')}
+                style={{
+                  padding: '4px 12px', borderRadius: '20px', border: dustMode === 'pm25' ? '1px solid #EC4899' : '1px solid rgba(0,0,0,0.1)',
+                  backgroundColor: dustMode === 'pm25' ? '#FFFFFF' : 'transparent',
+                  color: dustMode === 'pm25' ? '#EC4899' : '#64748B', fontSize: '11px', fontWeight: '700', cursor: 'pointer'
+                }}
+              >● 초미세먼지 (PM2.5)</button>
             </div>
-            <h2 style={styles.largeCardValue}>{sensorData.pm10}<span style={styles.largeCardUnit}>µg/m³</span></h2>
-            <div style={styles.largeChartContainer}>
-              <Line data={createChartData(chartDataList.pm10, '#F59E0B', 'rgba(245, 158, 11, 0.03)')} options={getChartOptions(0, 40)} />
-            </div>
+          )}
+          <div style={{ height: '240px', width: '100%' }}>
+            <Line data={generateChartConfig()} options={chartOptions} />
           </div>
         </div>
 
-        {/* 5. ⭐ [수정 핵심] 5개 그래프 카드 아래인 맨 밑바닥으로 요약 바 안착 */}
-        <div style={styles.horizontalSummaryBar}>
-          <div style={styles.summaryItem}><div style={styles.summaryDot('#F59E0B')}></div> CO₂ <span style={styles.summaryValue}>{sensorData.co2} ppm</span></div>
-          <div style={styles.summaryItem}><div style={styles.summaryDot('#10B981')}></div> 소음 <span style={styles.summaryValue}>{sensorData.noise} dB</span></div>
-          <div style={styles.summaryItem}><div style={styles.summaryDot('#10B981')}></div> 온도 <span style={styles.summaryValue}>{sensorData.temp} °C</span></div>
-          <div style={styles.summaryItem}><div style={styles.summaryDot('#10B981')}></div> 습도 <span style={styles.summaryValue}>{sensorData.humi} %</span></div>
-          <div style={styles.summaryItem}><div style={styles.summaryDot('#F59E0B')}></div> 미세먼지 <span style={styles.summaryValue}>{sensorData.pm10} µg/m³</span></div>
+        <div style={{
+          position: 'relative', zIndex: 1,
+          backgroundColor: 'rgba(255,255,255,0.82)',
+          backdropFilter: 'blur(16px)',
+          borderRadius: '20px', padding: '22px 24px',
+          border: '1px solid rgba(255,255,255,0.7)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
+        }}>
+          <div style={{ marginBottom: '14px' }}>
+            <span style={{ fontSize: '15px', fontWeight: '700', color: '#1A202C', display: 'block' }}>📋 수집 환경 데이터 종합 이력</span>
+          </div>
+          <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+              <thead>
+                <tr style={{ backgroundColor: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                  <th style={{ padding: '12px 14px', fontWeight: '700', color: '#475569' }}>수집 일시</th>
+                  <th style={{ padding: '12px 14px', fontWeight: '700', color: '#475569' }}>CO₂</th>
+                  <th style={{ padding: '12px 14px', fontWeight: '700', color: '#475569' }}>소음</th>
+                  <th style={{ padding: '12px 14px', fontWeight: '700', color: '#475569' }}>온도</th>
+                  <th style={{ padding: '12px 14px', fontWeight: '700', color: '#475569' }}>습도</th>
+                  <th style={{ padding: '12px 14px', fontWeight: '700', color: '#8B5CF6' }}>PM10</th>
+                  <th style={{ padding: '12px 14px', fontWeight: '700', color: '#EC4899' }}>PM2.5</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rawLogs.length === 0 ? (
+                  <tr><td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: '#94A3B8' }}>{isConnected ? '데이터 동기화 중...' : '서버 연결 대기 중...'}</td></tr>
+                ) : (
+                  rawLogs.map((row, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                      <td style={{ padding: '12px 14px', color: '#64748B', fontFamily: "'DM Mono', monospace" }}>{formatLogTime(row.time)}</td>
+                      <td style={{ padding: '12px 14px', color: '#334155' }}>{row.co2}</td>
+                      <td style={{ padding: '12px 14px', color: '#334155' }}>{row.noise}</td>
+                      <td style={{ padding: '12px 14px', color: '#334155' }}>{row.temperature}</td>
+                      <td style={{ padding: '12px 14px', color: '#334155' }}>{row.humidity}</td>
+                      <td style={{ padding: '12px 14px', color: '#8B5CF6' }}>{row.dustPm10}</td>
+                      <td style={{ padding: '12px 14px', color: '#EC4899' }}>{row.dustPm25}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-
       </main>
     </div>
   );
