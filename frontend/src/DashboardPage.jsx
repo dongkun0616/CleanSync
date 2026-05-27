@@ -121,7 +121,7 @@ const DashboardPage = () => {
 
   const fetchData = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard`);
+      const response = await fetch('/api/dashboard');
       const result = await response.json();
 
       if (result && result.success && result.data) {

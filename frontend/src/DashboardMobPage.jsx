@@ -20,8 +20,7 @@ const DashboardMobPage = () => {
 
   const fetchData = async () => {
     try {
-      // .env의 환경 변수 사용
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard`);
+      const response = await fetch('/api/dashboard');
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       
       const result = await response.json();

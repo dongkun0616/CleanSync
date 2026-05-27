@@ -1,27 +1,42 @@
 const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
+const path = require("path"); // path 패키지 추가
 
-require("dotenv").config();
+// [수정] PM2 실행 위치에 영향을 받지 않도록 .env 파일의 절대 경로를 직접 지정합니다.
+require("dotenv").config({ path: "/home/ec2-user/clean-sync/backend/.env" });
 
 const app = express();
 
 app.use(cors({ origin: "*", methods: ["GET", "POST"] }));
 app.use(express.json());
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10
-});
+// pool 인스턴스를 저장할 빈 변수 선언
+let pool = null;
+
+/**
+ * 환경 변수가 확실하게 주입된 시점에 DB 커넥션 풀을 리턴하는 헬퍼 함수
+ */
+function getPool() {
+  if (!pool) {
+    pool = mysql.createPool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      database: process.env.DB_NAME,
+      waitForConnections: true,
+      connectionLimit: 10
+    });
+  }
+  return pool;
+}
 
 // 1. 메인 홈 데이터 API
 app.get("/home", (req, res) => {
   const sql = `SELECT * FROM home_status ORDER BY CREATE_AT DESC LIMIT 1`;
-  pool.query(sql, (err, results) => {
+  
+  // pool.query 대신 getPool().query 사용
+  getPool().query(sql, (err, results) => {
     if (err) {
       console.error("홈 DB 오류:", err);
       return res.status(500).json({ success: false, message: "DB 오류 발생" });
@@ -52,7 +67,8 @@ app.get("/home", (req, res) => {
 app.get("/dashboard", (req, res) => {
   const currentSql = `SELECT * FROM home_status ORDER BY CREATE_AT DESC LIMIT 1`;
   
-  pool.query(currentSql, (err, currentResults) => {
+  // pool.query 대신 getPool().query 사용
+  getPool().query(currentSql, (err, currentResults) => {
     if (err) {
       console.error("대시보드 실시간 데이터 조회 실패:", err);
       return res.status(500).json({ success: false, message: "조회 실패" });
@@ -60,7 +76,7 @@ app.get("/dashboard", (req, res) => {
     
     const chartSql = `SELECT * FROM statistics_logs ORDER BY CREATE_AT DESC LIMIT 20`;
     
-    pool.query(chartSql, (err, chartResults) => {
+    getPool().query(chartSql, (err, chartResults) => {
       if (err) {
         console.error("대시보드 차트 데이터 조회 실패:", err);
         return res.status(500).json({ success: false, message: "조회 실패" });
