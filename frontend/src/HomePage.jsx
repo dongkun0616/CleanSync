@@ -218,7 +218,7 @@ const HomePage = () => {
   const fetchData = async () => {
     try {
       // 환경 변수 기반 API 주소 사용
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/home`);
+      const response = await fetch('/api/home');
       const result = await response.json();
 
       if (result && result.success && result.data) {
