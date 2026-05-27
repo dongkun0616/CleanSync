@@ -3,7 +3,9 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import TablePage from './TablePage';
 import StatusPage from './StatusPage';
 import DashboardPage from './DashboardPage';
-import DashboardMobPage from './DashboardMobPage'; // 1. 모바일 전용 파일 가져오기
+import DashboardMobPage from './DashboardMobPage';
+import AnalyticsPage from './AnalyticsPage';
+import AnalyticsMobPage from './AnalyticsMobPage';
 
 function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -23,7 +25,13 @@ function App() {
         <Route path="/" element={<TablePage />} />
         <Route path="/status" element={<StatusPage />} />
         
-        {/* 2. 감지된 화면 크기에 따라 다른 컴포넌트 렌더링 */}
+        {/* ⭐ 중복된 줄을 지우고, PC/모바일 자동 전환 코드만 하나 남겼습니다! */}
+        <Route 
+          path="/analytics" 
+          element={isMobile ? <AnalyticsMobPage /> : <AnalyticsPage />} 
+        />
+        
+        {/* 대시보드도 정상 작동 */}
         <Route 
           path="/dashboard" 
           element={isMobile ? <DashboardMobPage /> : <DashboardPage />} 

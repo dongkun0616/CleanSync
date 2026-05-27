@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // ⭐ 페이지 이동 함수 불러오기
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler
@@ -7,6 +8,8 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 const DashboardPage = () => {
+  const navigate = useNavigate(); // ⭐ 페이지 이동 함수 세팅
+
   // 실시간 가상 데이터 상태 관리
   const [sensorData, setSensorData] = useState({
     score: 88, status: '매우 쾌적', co2: 846, noise: 43, temp: 22.3, humi: 52, pm10: 18,
@@ -74,8 +77,9 @@ const DashboardPage = () => {
     sidebarStatusText: { fontSize: '16px', color: '#10B981', fontWeight: '600', marginTop: '8px' },
     
     navContainer: { display: 'flex', flexDirection: 'column', gap: '4px', flexGrow: 1 },
-    navItem: { display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', color: '#707E94', borderRadius: '8px', fontSize: '14px', fontWeight: '600' },
-    navItemActive: { display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', backgroundColor: '#28334E', color: '#4393F9', borderRadius: '8px', fontWeight: '700', fontSize: '14px' },
+    // ⭐ 마우스 올리면 손가락 모양(cursor: pointer)으로 바뀌도록 수정
+    navItem: { display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', color: '#707E94', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' },
+    navItemActive: { display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', backgroundColor: '#28334E', color: '#4393F9', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' },
 
     // 우측 메인 콘텐츠 영역
     mainPanel: { flex: 1, height: '100%', overflowY: 'auto', padding: '40px 48px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', backgroundColor: '#FAFCFF' },
@@ -100,7 +104,7 @@ const DashboardPage = () => {
     // 2열 레이아웃 (습도, 미세먼지)
     mainGridBottom: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px', width: '100%', boxSizing: 'border-box', marginBottom: '28px' },
 
-    // 💎 [위치 수정 완벽 반영] 모든 센서 그래프 아래 배치될 수평 요약 바
+    // [위치 수정 완벽 반영] 모든 센서 그래프 아래 배치될 수평 요약 바
     horizontalSummaryBar: { 
       display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', padding: '18px 36px', borderRadius: '14px', border: '1px solid #E4EBF4', width: '100%', boxSizing: 'border-box', boxShadow: '0 4px 14px rgba(0,0,0,0.015)'
     },
@@ -132,10 +136,11 @@ const DashboardPage = () => {
           <div style={styles.sidebarStatusText}>{sensorData.status}</div>
         </div>
 
+        {/* ⭐ 각 메뉴 클릭 시 이동하도록 onClick 이벤트 연결 */}
         <nav style={styles.navContainer}>
-          <div style={styles.navItem}>🏠 홈</div>
-          <div style={styles.navItemActive}>📊 대시보드</div>
-          <div style={styles.navItem}>📈 통계</div>
+          <div style={styles.navItem} onClick={() => navigate('/')}>🏠 홈</div>
+          <div style={styles.navItemActive} onClick={() => navigate('/dashboard')}>📊 대시보드</div>
+          <div style={styles.navItem} onClick={() => navigate('/analytics')}>📈 통계</div>
           <div style={styles.navItem}>⚙️ 설정</div>
         </nav>
       </aside>
@@ -214,7 +219,7 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* 5. ⭐ [수정 핵심] 5개 그래프 카드 아래인 맨 밑바닥으로 요약 바 안착 */}
+        {/* 5. 5개 그래프 카드 아래인 맨 밑바닥으로 요약 바 안착 */}
         <div style={styles.horizontalSummaryBar}>
           <div style={styles.summaryItem}><div style={styles.summaryDot('#F59E0B')}></div> CO₂ <span style={styles.summaryValue}>{sensorData.co2} ppm</span></div>
           <div style={styles.summaryItem}><div style={styles.summaryDot('#10B981')}></div> 소음 <span style={styles.summaryValue}>{sensorData.noise} dB</span></div>
