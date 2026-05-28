@@ -1,85 +1,121 @@
 const express = require("express");
 const mysql = require("mysql2");
-const cors = require('cors');
-const fs = require("fs");
-require("dotenv").config();
+const cors = require("cors");
+const path = require("path"); // path 패키지 추가
+
+// [수정] PM2 실행 위치에 영향을 받지 않도록 .env 파일의 절대 경로를 직접 지정합니다.
+require("dotenv").config({ path: "/home/ec2-user/clean-sync/backend/.env" });
 
 const app = express();
-app.use(cors());
+
+app.use(cors({ origin: "*", methods: ["GET", "POST"] }));
 app.use(express.json());
 
+// pool 인스턴스를 저장할 빈 변수 선언
+let pool = null;
 
-// ================== 로그 시스템 ==================
-function saveLog(message) {
-  const log = `[${new Date().toISOString()}] ${message}\n`;
-  fs.appendFileSync("log.txt", log);
+/**
+ * 환경 변수가 확실하게 주입된 시점에 DB 커넥션 풀을 리턴하는 헬퍼 함수
+ */
+function getPool() {
+  if (!pool) {
+    pool = mysql.createPool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      database: process.env.DB_NAME,
+      waitForConnections: true,
+      connectionLimit: 10
+    });
+  }
+  return pool;
 }
 
-// ================== DB 연결 ==================
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME
-});
-
-db.connect((err) => {
-  if (err) {
-    console.error("DB 연결 실패:", err);
-    saveLog("DB 연결 실패");
-  } else {
-    console.log("DB 연결 성공");
-    saveLog("DB 연결 성공");
-  }
-});
-
-// ================== API ==================
-
-app.get("/", (req, res) => {
-  res.send("서버 정상 작동 중입니다. /test 또는 /home으로 접속하세요.");
-});
-
-// 테스트 API
-app.get("/test", (req, res) => {
-  saveLog("/test API 호출");
-  res.json({ message: "서버 정상 작동" });
-});
-
-// 홈 데이터 조회 API
+// 1. 메인 홈 데이터 API
 app.get("/home", (req, res) => {
-  saveLog("/home API 호출 시작");
-
-  // 변경된 SQL: id 기준 내림차순 정렬 후, 가장 위 데이터 1개만 모든 컬럼(*) 선택
-  const sql = `
-    SELECT * 
-    FROM home_status 
-    ORDER BY id DESC 
-    LIMIT 1
-  `;
-
-  db.query(sql, (err, results) => {
+  const sql = `SELECT * FROM home_status ORDER BY CREATE_AT DESC LIMIT 1`;
+  
+  // pool.query 대신 getPool().query 사용
+  getPool().query(sql, (err, results) => {
     if (err) {
-      console.error("DB 조회 실패:", err);
-      saveLog(`DB 조회 실패: ${err.message}`);
-      return res.status(500).json({ error: "DB 조회 실패" });
+      console.error("홈 DB 오류:", err);
+      return res.status(500).json({ success: false, message: "DB 오류 발생" });
+    }
+    if (!results || !Array.isArray(results) || results.length === 0) {
+      return res.status(404).json({ success: false, message: "데이터 없음" });
     }
 
-    // 데이터가 없을 경우를 대비해 빈 배열 체크
-    if (results.length === 0) {
-      saveLog("DB 조회 성공: 데이터가 없음");
-      return res.json([]);
-    }
-
-    saveLog(`DB 조회 성공 (최신 데이터 ID: ${results[0].id})`);
-    
-    // 결과가 배열로 나오므로 그대로 보냅니다. 
-    // 프론트엔드에서는 data[0].TEMP 등으로 접근하게 됩니다.
-    res.json(results);
+    const data = results[0];
+    res.json({
+      success: true,
+      data: {
+        score: Number(data.SPACE_SCORE || 0),
+        statusText: data.CST || "알 수 없음",
+        aiMessage: data.AI_MESSAGE || "데이터 없음",
+        co2: Number(data.CO2 || 0),
+        noise: Number(data.NOS || 0),
+        temperature: Number(data.TEMP || 0),
+        humidity: Number(data.HUM || 0),
+        dustPm10: Number(data.DUST_PM10 || 0),
+        dustPm25: Number(data.DUST_PM25 || 0)
+      }
+    });
   });
 });
 
-// ================== 서버 실행 ==================
-app.listen(3000, "0.0.0.0", () => {
-  console.log("API 서버 실행: http://13.124.252.181:3000");
-  saveLog("서버 실행");
+// 2. 대시보드 API (home_status의 CST + statistics_logs의 차트 데이터 통합)
+app.get("/dashboard", (req, res) => {
+  const currentSql = `SELECT * FROM home_status ORDER BY CREATE_AT DESC LIMIT 1`;
+  
+  // pool.query 대신 getPool().query 사용
+  getPool().query(currentSql, (err, currentResults) => {
+    if (err) {
+      console.error("대시보드 실시간 데이터 조회 실패:", err);
+      return res.status(500).json({ success: false, message: "조회 실패" });
+    }
+    
+    const chartSql = `SELECT * FROM statistics_logs ORDER BY CREATE_AT DESC LIMIT 20`;
+    
+    getPool().query(chartSql, (err, chartResults) => {
+      if (err) {
+        console.error("대시보드 차트 데이터 조회 실패:", err);
+        return res.status(500).json({ success: false, message: "조회 실패" });
+      }
+
+      const latest = currentResults && currentResults.length > 0 ? currentResults[0] : {};
+      const logs = chartResults && Array.isArray(chartResults) ? chartResults : [];
+
+      const chartData = [...logs].reverse().map((row) => ({
+        time: row.CREATE_AT,
+        co2: Number(row.CO2 || 0),
+        noise: Number(row.NOS || 0),
+        temperature: Number(row.TEMP || 0),
+        humidity: Number(row.HUM || 0),
+        dustPm10: Number(row.DUST_PM10 || 0),
+        dustPm25: Number(row.DUST_PM25 || 0)
+      }));
+
+      res.json({
+        success: true,
+        data: {
+          current: {
+            score: Number(latest.SPACE_SCORE || 0),
+            statusText: latest.CST || "보통", 
+            co2: Number(latest.CO2 || 0),
+            noise: Number(latest.NOS || 0),
+            temperature: Number(latest.TEMP || 0),
+            humidity: Number(latest.HUM || 0),
+            dustPm10: Number(latest.DUST_PM10 || 0),
+            dustPm25: Number(latest.DUST_PM25 || 0)
+          },
+          charts: chartData
+        }
+      });
+    });
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`API 서버 실행 중: http://0.0.0.0:${PORT}`);
 });
