@@ -46,6 +46,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: white;
 }
 
 .logo-text {
@@ -99,12 +100,9 @@ body {
   font-size: 12px;
 }
 
-/* 메뉴 */
-
 .menu {
   width: 100%;
-  padding: 14px 16px;
-  padding-left: 28px;
+  padding: 14px 16px 14px 28px;
   border-radius: 10px;
   margin-bottom: 10px;
   color: #9aa8b8;
@@ -143,8 +141,6 @@ body {
   gap: 80px;
   padding: 40px;
 }
-
-/* 게이지 */
 
 .gauge {
   --percent: 88;
@@ -203,9 +199,7 @@ body {
     transparent 131px
   );
 
-  filter: drop-shadow(
-    0 8px 12px rgba(24, 196, 143, 0.35)
-  );
+  filter: drop-shadow(0 8px 12px rgba(24, 196, 143, 0.35));
 }
 
 .circle {
@@ -374,12 +368,12 @@ body {
 
 .co2-icon {
   position: relative;
-  background: #d7f8ea !important;
+  background: #fff3dc !important;
 }
 
 .co2-cloud {
   font-size: 24px;
-  color: #18c48f;
+  color: orange;
   line-height: 1;
 }
 
@@ -388,15 +382,7 @@ body {
   bottom: 6px;
   font-size: 8px;
   font-weight: bold;
-  color: #18c48f;
-}
-
-.co2-dots {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  font-size: 6px;
-  color: #18c48f;
+  color: orange;
 }
 
 .sensor small,
@@ -409,12 +395,325 @@ body {
   text-align: center;
 }
 
+/* 설정 페이지 */
+
+.settings-main {
+  flex: 1;
+  display: block;
+  padding: 0;
+  background: #f8fafc;
+  overflow-y: auto;
+  min-height: 100vh;
+}
+
+.settings-page {
+  width: 100%;
+  min-height: 100vh;
+  background: #f8fafc;
+}
+
+.settings-header {
+  padding: 24px 32px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+}
+
+.settings-header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #07182d;
+  text-align: left;
+}
+
+.settings-header p {
+  margin: 6px 0 0;
+  color: #7f8fa3;
+  font-size: 14px;
+  text-align: left;
+}
+
+.settings-layout {
+  display: flex;
+  width: 100%;
+  min-height: calc(100vh - 86px);
+}
+
+.settings-side-menu {
+  width: 260px;
+  background: white;
+  border-right: 1px solid #e5e7eb;
+  padding: 24px 16px;
+  flex-shrink: 0;
+}
+
+.settings-tab {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: left;
+  font-weight: bold;
+  color: #6f7f8f;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: 0.2s;
+}
+
+.settings-tab span {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: normal;
+}
+
+.settings-tab:hover {
+  background: #f2f8fc;
+}
+
+.settings-tab.active {
+  background: #14b8d4;
+  color: white;
+}
+
+.settings-content {
+  flex: 1;
+  max-width: none;
+  padding: 32px 40px;
+}
+
+.settings-section {
+  margin-bottom: 28px;
+  max-width: 760px;
+}
+
+.settings-section h2 {
+  margin: 0 0 24px;
+  font-size: 22px;
+  color: #07182d;
+  text-align: left;
+}
+
+.settings-section h3,
+.left-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+  color: #07182d;
+  text-align: left;
+}
+
+.settings-desc {
+  margin: 0 0 18px;
+  color: #7f8fa3;
+  font-size: 13px;
+  text-align: left;
+}
+
+.settings-card {
+  width: 100%;
+  max-width: 760px;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px;
+  border-bottom: 1px solid #eef2f7;
+  text-align: left;
+  gap: 14px;
+}
+
+.setting-row:last-child {
+  border-bottom: none;
+}
+
+.setting-row > div {
+  flex: 1;
+}
+
+.setting-row b {
+  display: block;
+  color: #07182d;
+  font-size: 15px;
+  text-align: left;
+}
+
+.setting-row p {
+  margin: 4px 0 0;
+  color: #7f8fa3;
+  font-size: 13px;
+  text-align: left;
+}
+
+/* 스위치 */
+
+.switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.switch input {
+  display: none;
+}
+
+.slider {
+  position: absolute;
+  inset: 0;
+  background: #d1d5db;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.slider::before {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  top: 3px;
+  border-radius: 50%;
+  background: white;
+  transition: 0.3s;
+}
+
+.switch input:checked + .slider {
+  background: #18c48f;
+}
+
+.switch input:checked + .slider::before {
+  transform: translateX(20px);
+}
+
+/* 임계값 */
+
+.threshold-card {
+  padding: 0 20px;
+}
+
+.threshold-item {
+  padding: 22px 0;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.threshold-item:last-child {
+  border-bottom: none;
+}
+
+.threshold-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.threshold-top b {
+  font-size: 15px;
+  color: #07182d;
+}
+
+.threshold-top span {
+  color: orange;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.threshold-item input[type="range"] {
+  width: 100%;
+  accent-color: #18c48f;
+}
+
+.threshold-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 12px;
+  color: #7f8fa3;
+}
+
+.threshold-labels span:nth-child(2) {
+  color: #18c48f;
+}
+
+.threshold-labels span:nth-child(3) {
+  color: orange;
+}
+
+.save-setting-btn {
+  border: none;
+  background: #0f6b4d;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.save-setting-btn:hover {
+  background: #0a533a;
+}
+
+/* 기기 관리 */
+
+.device-status {
+  margin-left: 16px;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.good-text {
+  color: #18c48f;
+}
+
+/* 프로필 */
+
+.profile-card {
+  padding: 24px;
+}
+
+.profile-card label {
+  display: block;
+  margin-bottom: 20px;
+  color: #07182d;
+  font-weight: bold;
+  text-align: left;
+}
+
+.profile-card input {
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px;
+  border: 1px solid #dbe3ea;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+}
+
+.profile-card input:focus {
+  border-color: #14b8d4;
+}
+
+/* 설정 모바일 추가 */
+
+.mobile-settings-list,
+.mobile-back {
+  display: none;
+}
+
 /* 모바일 */
 
 @media (max-width: 768px) {
   .app {
     display: block;
-    min-height: 100vh;
     background: #f8fafc;
   }
 
@@ -425,7 +724,7 @@ body {
   .mobile-header {
     display: flex;
     height: 54px;
-    padding: 0 16px;
+    padding: 0 14px;
     align-items: center;
     justify-content: space-between;
     background: white;
@@ -449,7 +748,7 @@ body {
   .mobile-right {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
   }
 
   .mobile-score {
@@ -461,14 +760,18 @@ body {
   .mobile-menu-button {
     border: none;
     background: transparent;
-    font-size: 26px;
+    font-size: 22px;
     color: #07182d;
     cursor: pointer;
-    line-height: 1;
   }
 
   .main {
     display: block;
+    padding: 0;
+    background: #f8fafc;
+  }
+
+  .settings-main {
     padding: 0;
   }
 
@@ -478,21 +781,22 @@ body {
 
   .mobile-hero {
     display: flex;
-    height: 224px;
+    height: 245px;
     background: #dff8ec;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 14px;
+    padding: 18px;
+    border-radius: 0;
   }
 
   .mobile-status {
-    background: rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.55);
     color: #18c48f;
     padding: 5px 14px;
     border-radius: 20px;
     font-size: 12px;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
 
   .mobile-hero h1 {
@@ -503,20 +807,19 @@ body {
   }
 
   .mobile-hero p {
-    margin: 14px 0 14px;
+    margin: 8px 0 14px;
     color: #6f8a85;
+    font-size: 14px;
   }
 
   .mobile-ai-box {
     width: 100%;
-    max-width: 250px;
     background: rgba(255, 255, 255, 0.45);
     border-left: 4px solid #18c48f;
     border-radius: 12px;
     padding: 12px;
     color: #48615e;
     font-size: 13px;
-    line-height: 1.5;
   }
 
   .info {
@@ -531,12 +834,12 @@ body {
 
   .mobile-title {
     display: block;
-    font-weight: bold;
     font-size: 14px;
+    font-weight: bold;
     color: #07182d;
-    margin: 8px 0 10px;
     border-left: 4px solid #14b8d4;
     padding-left: 8px;
+    margin: 8px 0 8px;
   }
 
   .sensor-grid {
@@ -548,82 +851,113 @@ body {
   .sensor {
     position: relative;
     display: block;
-    min-height: 132px;
-    padding: 22px;
-    border-radius: 14px;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+    min-height: 210px;
+    padding: 20px;
+    border-radius: 16px;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .sensor:nth-child(n + 3) {
+    display: none;
   }
 
   .sensor-icon {
-    display: inline-flex;
-    width: 36px;
-    height: 36px;
-    align-items: center;
-    justify-content: center;
-    border-radius: 10px;
-    background: #fff3dc;
-    margin-bottom: 14px;
-  }
-
-  .green .sensor-icon {
-    background: #d7f8ea;
-  }
-
-  .badge {
-    display: inline-block;
     position: absolute;
-    top: 18px;
-    right: 18px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 11px;
-  }
-
-  .warning {
-    background: #fff3dc;
-    color: #d58b00;
-  }
-
-  .good {
-    background: #d7f8ea;
-    color: #18c48f;
+    top: 20px;
+    left: 20px;
+    width: 42px;
+    height: 42px;
+    margin: 0;
   }
 
   .sensor-label {
-    display: block;
-    margin-bottom: 6px;
-    color: #6f8a85;
-    font-size: 13px;
+    position: absolute;
+    left: 22px;
+    top: 82px;
+    font-size: 14px;
+    color: #7f8fa3;
   }
 
   .sensor b {
-    font-size: 34px;
+    position: absolute;
+    left: 22px;
+    top: 112px;
+    font-size: 36px;
+    line-height: 1;
   }
 
-  .unit {
-    display: inline;
-    margin-left: 4px;
-    color: #6f8a85;
+  .sensor.orange .unit {
+    position: absolute;
+    left: 140px;
+    top: 130px;
+    font-size: 13px;
+    color: #7f8fa3;
   }
 
-  .sensor small {
-    display: block;
-    margin-top: 8px;
-    color: #999;
+  .sensor.green .unit {
+    position: absolute;
+    left: 90px;
+    top: 130px;
+    font-size: 13px;
+    color: #7f8fa3;
+  }
+
+  .sensor.orange::after {
+    content: "주의";
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: #fff3dc;
+    color: orange;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: bold;
+  }
+
+  .sensor.green::after {
+    content: "양호";
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: #dff8ec;
+    color: #18c48f;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: bold;
+  }
+
+  .sensor.orange::before {
+    content: "약간 높은 수준입니다";
+    position: absolute;
+    left: 22px;
+    bottom: 18px;
+    color: #7f8fa3;
+    font-size: 12px;
+  }
+
+  .sensor.green::before {
+    content: "조용한 환경입니다";
+    position: absolute;
+    left: 22px;
+    bottom: 18px;
+    color: #7f8fa3;
+    font-size: 12px;
   }
 
   .other-sensor {
     display: block;
-    background: white;
-    border-radius: 14px;
-    padding: 14px;
+    background: transparent;
   }
 
   .other-sensor div {
     display: flex;
     justify-content: space-between;
-    margin-bottom: 10px;
-    font-size: 14px;
+    padding: 6px 4px;
+    font-size: 13px;
+    color: #7f8fa3;
   }
 
   .other-sensor span {
@@ -635,18 +969,168 @@ body {
     color: orange;
   }
 
-  .page-box {
-    width: auto;
-    margin: 20px;
+  .settings-page {
+    background: #f8fafc;
+    min-height: calc(100vh - 54px);
+  }
+
+  .settings-header {
+    padding: 20px;
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .settings-header h1 {
+    font-size: 20px;
+  }
+
+  .settings-header p {
+    font-size: 13px;
+  }
+
+  .mobile-settings-list {
+    display: block;
+    background: white;
+  }
+
+  .mobile-setting-row {
+    display: grid;
+    grid-template-columns: 1fr 20px;
+    align-items: center;
+    padding: 18px 0 !important;
+    border-bottom: 1px solid #e5e7eb;
+    cursor: pointer;
+  }
+
+  .mobile-setting-row > div,
+  .mobile-setting-text {
+    grid-column: 1;
+    justify-self: start;
+    width: 100%;
+    margin-left: 18px !important;
+    padding-left: 0 !important;
+    text-align: left !important;
+  }
+
+  .mobile-setting-row > div b,
+  .mobile-setting-text b {
+    display: block;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 15px;
+    color: #07182d;
+    text-align: left !important;
+  }
+
+  .mobile-setting-row > div p,
+  .mobile-setting-text p {
+    margin: 4px 0 0 !important;
+    padding: 0 !important;
+    color: #7f8fa3;
+    font-size: 12px;
+    text-align: left !important;
+  }
+
+  .mobile-setting-row > span {
+    grid-column: 2;
+    justify-self: end;
+    color: #7f8fa3;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .settings-layout {
+    flex-direction: column;
+  }
+
+  .settings-side-menu {
+    display: none;
+  }
+
+  .mobile-detail-hidden .settings-content {
+    display: none;
+  }
+
+  .settings-content {
+    padding: 0;
+    max-width: none;
+  }
+
+  .mobile-back {
+    display: block;
+    width: 100%;
+    padding: 14px 20px;
+    background: white;
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    color: #7f8fa3;
+    text-align: left;
+    font-size: 14px;
+  }
+
+  .settings-section {
+    padding: 20px;
+    max-width: none;
+  }
+
+  .settings-section h2 {
+    font-size: 18px;
+  }
+
+  .settings-section h3 {
+    font-size: 15px;
+  }
+
+  .settings-card {
+    border-radius: 10px;
+  }
+
+  .setting-row {
+    padding: 16px;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .setting-row b {
+    font-size: 14px;
+  }
+
+  .setting-row p {
+    font-size: 12px;
+  }
+
+  .threshold-card {
+    padding: 0 14px;
+  }
+
+  .threshold-top {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .threshold-top b {
+    font-size: 13px;
+  }
+
+  .threshold-top span {
+    font-size: 12px;
+  }
+
+  .threshold-labels {
+    font-size: 10px;
+  }
+
+  .save-setting-btn {
+    width: 100%;
   }
 
   .mobile-menu-panel {
     display: block;
     position: fixed;
     inset: 54px 0 0 0;
-    z-index: 999;
     background: #07182d;
     padding: 18px;
+    z-index: 999;
   }
 
   .mobile-menu-item {
@@ -664,14 +1148,127 @@ body {
     background: #14b8d4;
     color: white;
   }
+}
+/* 기기 삭제 / 새 기기 추가 모달 */
 
-  .mobile-menu-item b {
-    display: block;
-    font-size: 18px;
+.device-row {
+  align-items: center;
+}
+
+.device-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.offline-text {
+  color: #6f7f8f;
+}
+
+.delete-device-btn {
+  border: none;
+  background: #fff1f1;
+  color: #e54848;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.delete-device-btn:hover {
+  background: #ffdede;
+}
+
+.add-device-btn {
+  margin-top: 12px;
+}
+
+.device-modal-bg {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 24, 45, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.device-modal {
+  width: 360px;
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.device-modal h3 {
+  margin: 0 0 8px;
+  color: #07182d;
+  text-align: left;
+}
+
+.device-modal p {
+  margin: 0 0 18px;
+  color: #7f8fa3;
+  font-size: 13px;
+  text-align: left;
+}
+
+.device-modal label {
+  display: block;
+  margin-bottom: 14px;
+  color: #07182d;
+  font-weight: bold;
+  font-size: 14px;
+  text-align: left;
+}
+
+.device-modal input {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid #dbe3ea;
+  border-radius: 10px;
+  outline: none;
+}
+
+.device-modal-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.cancel-device-btn,
+.confirm-device-btn {
+  flex: 1;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.cancel-device-btn {
+  background: #eef2f7;
+  color: #6f7f8f;
+}
+
+.confirm-device-btn {
+  background: #0f6b4d;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .device-actions {
+    gap: 8px;
   }
 
-  .mobile-menu-item p {
-    margin: 4px 0 0;
-    font-size: 14px;
+  .delete-device-btn {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .device-modal {
+    width: calc(100% - 40px);
   }
 }
