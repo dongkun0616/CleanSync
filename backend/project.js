@@ -1,80 +1,52 @@
 const express = require("express");
 const mysql = require("mysql2");
+const cors = require("cors");
 const fs = require("fs");
-require("dotenv").config();
+
+require("dotenv").config({ path: "/home/ec2-user/clean-sync/backend/.env" });
 
 const app = express();
+
+app.use(cors({ origin: "*", methods: ["GET", "POST", "PUT"] }));
 app.use(express.json());
 
-// ================== 로그 시스템 ==================
 function saveLog(message) {
   const log = `[${new Date().toISOString()}] ${message}\n`;
   fs.appendFileSync("log.txt", log);
 }
 
-// ================== DB 연결 ==================
-const db = mysql.createConnection({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME
-});
+let pool = null;
 
-db.connect((err) => {
-  if (err) {
-    console.error("DB 연결 실패:", err);
-    saveLog(`DB 연결 실패: ${err.message}`);
-  } else {
-    console.log("DB 연결 성공");
-    saveLog("DB 연결 성공");
+function getPool() {
+  if (!pool) {
+    pool = mysql.createPool({
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      database: process.env.DB_NAME,
+      waitForConnections: true,
+      connectionLimit: 10
+    });
   }
-});
+  return pool;
+}
 
-// ================== 기본 API ==================
 app.get("/", (req, res) => {
   res.send("서버 정상 작동 중입니다. /home, /dashboard, /analytics, /settings 로 접속하세요.");
 });
 
-// ================== 메인 홈 화면 API ==================
+// ================== 메인 홈 API ==================
 app.get("/home", (req, res) => {
-  saveLog("/home API 호출");
+  const sql = `SELECT * FROM home_status ORDER BY CREATE_AT DESC LIMIT 1`;
 
-  const sql = `
-    SELECT
-      SPACE_SCORE,
-      CST,
-      STATUS_LEVEL,
-      AI_MESSAGE,
-      CO2,
-      NOS,
-      TEMP,
-      HUM,
-      DUST_PM10,
-      DUST_PM25,
-      WIFI_COUNT,
-      location,
-      CREATE_AT
-    FROM home_status
-    ORDER BY CREATE_AT DESC
-    LIMIT 1
-  `;
-
-  db.query(sql, (err, results) => {
+  getPool().query(sql, (err, results) => {
     if (err) {
-      console.error("홈 데이터 조회 실패:", err);
-      saveLog(`홈 데이터 조회 실패: ${err.message}`);
-
-      return res.status(500).json({
-        success: false,
-        message: "홈 데이터 조회 실패"
-      });
+      console.error("홈 DB 오류:", err);
+      return res.status(500).json({ success: false, message: "DB 오류 발생" });
     }
 
-    if (results.length === 0) {
-      return res.json({
-        success: false,
-        message: "데이터가 없습니다."
-      });
+    if (!results || results.length === 0) {
+      return res.status(404).json({ success: false, message: "데이터 없음" });
     }
 
     const data = results[0];
@@ -82,94 +54,72 @@ app.get("/home", (req, res) => {
     res.json({
       success: true,
       data: {
-        score: Number(data.SPACE_SCORE),
-        statusText: data.CST,
-        statusLevel: data.STATUS_LEVEL,
-        aiMessage: data.AI_MESSAGE,
-        co2: Number(data.CO2),
-        noise: Number(data.NOS),
-        temperature: Number(data.TEMP),
-        humidity: Number(data.HUM),
-        dustPm10: Number(data.DUST_PM10),
-        dustPm25: Number(data.DUST_PM25),
-        wifiCount: Number(data.WIFI_COUNT),
-        location: data.location,
+        score: Number(data.SPACE_SCORE || 0),
+        statusText: data.CST || "알 수 없음",
+        statusLevel: data.STATUS_LEVEL || null,
+        aiMessage: data.AI_MESSAGE || "데이터 없음",
+        co2: Number(data.CO2 || 0),
+        noise: Number(data.NOS || 0),
+        temperature: Number(data.TEMP || 0),
+        humidity: Number(data.HUM || 0),
+        dustPm10: Number(data.DUST_PM10 || 0),
+        dustPm25: Number(data.DUST_PM25 || 0),
+        wifiCount: Number(data.WIFI_COUNT || 0),
+        location: data.location || null,
         createdAt: data.CREATE_AT
       }
     });
-
-    saveLog("메인 홈 데이터 조회 성공");
   });
 });
 
-// ================== 실시간 대시보드 API ==================
+// ================== 대시보드 API ==================
 app.get("/dashboard", (req, res) => {
-  saveLog("/dashboard API 호출");
+  const currentSql = `SELECT * FROM home_status ORDER BY CREATE_AT DESC LIMIT 1`;
 
-  const sql = `
-    SELECT
-      id,
-      CO2,
-      NOS,
-      TEMP,
-      HUM,
-      DUST_PM10,
-      DUST_PM25,
-      CREATE_AT
-    FROM home_status
-    ORDER BY CREATE_AT DESC
-    LIMIT 20
-  `;
-
-  db.query(sql, (err, results) => {
+  getPool().query(currentSql, (err, currentResults) => {
     if (err) {
-      console.error("대시보드 조회 실패:", err);
-      saveLog(`대시보드 조회 실패: ${err.message}`);
-
-      return res.status(500).json({
-        success: false,
-        message: "대시보드 데이터 조회 실패"
-      });
+      console.error("대시보드 실시간 데이터 조회 실패:", err);
+      return res.status(500).json({ success: false, message: "조회 실패" });
     }
 
-    if (results.length === 0) {
-      return res.json({
-        success: false,
-        message: "데이터가 없습니다."
-      });
-    }
+    const chartSql = `SELECT * FROM statistics_logs ORDER BY CREATE_AT DESC LIMIT 20`;
 
-    const latest = results[0];
-
-    const chartData = [...results].reverse().map((row) => {
-      return {
-        time: row.CREATE_AT,
-        co2: Number(row.CO2),
-        noise: Number(row.NOS),
-        temperature: Number(row.TEMP),
-        humidity: Number(row.HUM),
-        dustPm10: Number(row.DUST_PM10),
-        dustPm25: Number(row.DUST_PM25)
-      };
-    });
-
-    res.json({
-      success: true,
-      data: {
-        current: {
-          co2: Number(latest.CO2),
-          noise: Number(latest.NOS),
-          temperature: Number(latest.TEMP),
-          humidity: Number(latest.HUM),
-          dustPm10: Number(latest.DUST_PM10),
-          dustPm25: Number(latest.DUST_PM25),
-          createdAt: latest.CREATE_AT
-        },
-        charts: chartData
+    getPool().query(chartSql, (err, chartResults) => {
+      if (err) {
+        console.error("대시보드 차트 데이터 조회 실패:", err);
+        return res.status(500).json({ success: false, message: "조회 실패" });
       }
-    });
 
-    saveLog("대시보드 데이터 조회 성공");
+      const latest = currentResults && currentResults.length > 0 ? currentResults[0] : {};
+      const logs = chartResults && Array.isArray(chartResults) ? chartResults : [];
+
+      const chartData = [...logs].reverse().map((row) => ({
+        time: row.CREATE_AT,
+        co2: Number(row.CO2 || 0),
+        noise: Number(row.NOS || 0),
+        temperature: Number(row.TEMP || 0),
+        humidity: Number(row.HUM || 0),
+        dustPm10: Number(row.DUST_PM10 || 0),
+        dustPm25: Number(row.DUST_PM25 || 0)
+      }));
+
+      res.json({
+        success: true,
+        data: {
+          current: {
+            score: Number(latest.SPACE_SCORE || 0),
+            statusText: latest.CST || "보통",
+            co2: Number(latest.CO2 || 0),
+            noise: Number(latest.NOS || 0),
+            temperature: Number(latest.TEMP || 0),
+            humidity: Number(latest.HUM || 0),
+            dustPm10: Number(latest.DUST_PM10 || 0),
+            dustPm25: Number(latest.DUST_PM25 || 0)
+          },
+          charts: chartData
+        }
+      });
+    });
   });
 });
 
@@ -189,20 +139,21 @@ app.get("/analytics", (req, res) => {
   const hours = rangeMap[range] || 6;
 
   const sql = `
-  SELECT
-    SPACE_SCORE,
-    CO2,
-    NOS,
-    TEMP,
-    HUM,
-    DUST_PM10,
-    DUST_PM25,
-    CREATE_AT
-  FROM home_status
-  WHERE CREATE_AT >= DATE_SUB(NOW(), INTERVAL ? HOUR)
-  ORDER BY CREATE_AT ASC
-`;
-  db.query(sql, [hours], (err, results) => {
+    SELECT
+      SPACE_SCORE,
+      CO2,
+      NOS,
+      TEMP,
+      HUM,
+      DUST_PM10,
+      DUST_PM25,
+      CREATE_AT
+    FROM home_status
+    WHERE CREATE_AT >= DATE_SUB(NOW(), INTERVAL ? HOUR)
+    ORDER BY CREATE_AT ASC
+  `;
+
+  getPool().query(sql, [hours], (err, results) => {
     if (err) {
       console.error("통계 데이터 조회 실패:", err);
       saveLog(`통계 데이터 조회 실패: ${err.message}`);
@@ -220,18 +171,16 @@ app.get("/analytics", (req, res) => {
       });
     }
 
-    const chartData = results.map((row) => {
-      return {
-        time: row.CREATE_AT,
-        score: Number(row.SPACE_SCORE),
-        co2: Number(row.CO2),
-        noise: Number(row.NOS),
-        temperature: Number(row.TEMP),
-        humidity: Number(row.HUM),
-        dustPm10: Number(row.DUST_PM10),
-        dustPm25: Number(row.DUST_PM25)
-      };
-    });
+    const chartData = results.map((row) => ({
+      time: row.CREATE_AT,
+      score: Number(row.SPACE_SCORE || 0),
+      co2: Number(row.CO2 || 0),
+      noise: Number(row.NOS || 0),
+      temperature: Number(row.TEMP || 0),
+      humidity: Number(row.HUM || 0),
+      dustPm10: Number(row.DUST_PM10 || 0),
+      dustPm25: Number(row.DUST_PM25 || 0)
+    }));
 
     const avg = (key) => {
       const sum = chartData.reduce((total, item) => total + item[key], 0);
@@ -259,10 +208,9 @@ app.get("/analytics", (req, res) => {
 
     res.json({
       success: true,
-      range: range,
+      range,
       data: {
         chart: chartData,
-
         summary: {
           avgScore,
           avgCo2,
@@ -273,16 +221,12 @@ app.get("/analytics", (req, res) => {
           avgDustPm25,
           totalCount: chartData.length
         },
-
         insights: {
           bestFocusTime: bestFocus.time,
           bestFocusScore: bestFocus.score,
-
           highestCo2Time: highestCo2.time,
           highestCo2Value: highestCo2.co2,
-
           comfortableRate,
-
           message: `선택 기간 동안 평균 학습 지수는 ${avgScore}점이고, 쾌적 비율은 ${comfortableRate}%입니다.`
         }
       }
@@ -308,7 +252,7 @@ app.get("/settings", (req, res) => {
     LIMIT 1
   `;
 
-  db.query(sql, (err, results) => {
+  getPool().query(sql, (err, results) => {
     if (err) {
       console.error("설정 조회 실패:", err);
       saveLog(`설정 조회 실패: ${err.message}`);
@@ -333,8 +277,8 @@ app.get("/settings", (req, res) => {
       data: {
         dustAlertEnabled: Boolean(data.dust_alert_enabled),
         noiseAlertEnabled: Boolean(data.noise_alert_enabled),
-        dustThreshold: Number(data.alert_dust_threshold),
-        noiseThreshold: Number(data.alert_noise_threshold),
+        dustThreshold: Number(data.alert_dust_threshold || 0),
+        noiseThreshold: Number(data.alert_noise_threshold || 0),
         themeMode: data.theme_mode,
         serviceInfo: data.service_info
       }
@@ -375,7 +319,7 @@ app.put("/settings", (req, res) => {
     themeMode
   ];
 
-  db.query(sql, values, (err) => {
+  getPool().query(sql, values, (err) => {
     if (err) {
       console.error("설정 저장 실패:", err);
       saveLog(`설정 저장 실패: ${err.message}`);
@@ -395,8 +339,8 @@ app.put("/settings", (req, res) => {
   });
 });
 
-// ================== 서버 실행 ==================
-app.listen(3000, "0.0.0.0", () => {
-  console.log("API 서버 실행: http://13.124.252.181:3000");
-  saveLog("서버 실행");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`API 서버 실행 중: http://0.0.0.0:${PORT}`);
 });
