@@ -1,13 +1,9 @@
 const express = require("express");
 const mysql = require("mysql2");
 const fs = require("fs");
-const cors = require("cors");
-
 require("dotenv").config();
 
 const app = express();
-
-app.use(cors());
 app.use(express.json());
 
 // ================== 로그 시스템 ==================
@@ -36,17 +32,10 @@ db.connect((err) => {
 
 // ================== 기본 API ==================
 app.get("/", (req, res) => {
-  res.send("서버 정상 작동 중입니다. /home 또는 /dashboard 로 접속하세요.");
+  res.send("서버 정상 작동 중입니다. /home, /dashboard, /analytics, /settings 로 접속하세요.");
 });
 
 // ================== 메인 홈 화면 API ==================
-/*
-  메인 홈 화면에 필요한 최신 데이터 1개를 조회해서 전달
-  - 학습 지수
-  - 현재 상태
-  - AI 메시지
-  - 센서 값
-*/
 app.get("/home", (req, res) => {
   saveLog("/home API 호출");
 
@@ -82,8 +71,6 @@ app.get("/home", (req, res) => {
     }
 
     if (results.length === 0) {
-      saveLog("홈 데이터 없음");
-
       return res.json({
         success: false,
         message: "데이터가 없습니다."
@@ -92,10 +79,6 @@ app.get("/home", (req, res) => {
 
     const data = results[0];
 
-    /*
-      DECIMAL 타입은 문자열로 넘어올 수 있어서
-      프론트 그래프/게이지에서 쓰기 쉽게 Number()로 변환
-    */
     res.json({
       success: true,
       data: {
@@ -103,14 +86,12 @@ app.get("/home", (req, res) => {
         statusText: data.CST,
         statusLevel: data.STATUS_LEVEL,
         aiMessage: data.AI_MESSAGE,
-
         co2: Number(data.CO2),
         noise: Number(data.NOS),
         temperature: Number(data.TEMP),
         humidity: Number(data.HUM),
         dustPm10: Number(data.DUST_PM10),
         dustPm25: Number(data.DUST_PM25),
-
         wifiCount: Number(data.WIFI_COUNT),
         location: data.location,
         createdAt: data.CREATE_AT
@@ -122,16 +103,6 @@ app.get("/home", (req, res) => {
 });
 
 // ================== 실시간 대시보드 API ==================
-/*
-  대시보드 화면용 API
-
-  current:
-  - 현재 카드에 표시할 최신 센서 값
-
-  charts:
-  - 그래프를 그리기 위한 최근 데이터 배열
-  - DB에서는 최신순으로 가져오고, 프론트 그래프용으로 과거 → 현재 순서로 변경
-*/
 app.get("/dashboard", (req, res) => {
   saveLog("/dashboard API 호출");
 
@@ -162,21 +133,14 @@ app.get("/dashboard", (req, res) => {
     }
 
     if (results.length === 0) {
-      saveLog("대시보드 데이터 없음");
-
       return res.json({
         success: false,
         message: "데이터가 없습니다."
       });
     }
 
-    // DESC 정렬이므로 results[0]이 가장 최신 데이터
     const latest = results[0];
 
-    /*
-      [...results]로 배열 복사 후 reverse()
-      원본 results를 직접 뒤집지 않기 위해 사용
-    */
     const chartData = [...results].reverse().map((row) => {
       return {
         time: row.CREATE_AT,
@@ -206,6 +170,228 @@ app.get("/dashboard", (req, res) => {
     });
 
     saveLog("대시보드 데이터 조회 성공");
+  });
+});
+
+// ================== 통계 페이지 API ==================
+app.get("/analytics", (req, res) => {
+  saveLog("/analytics API 호출");
+
+  const range = req.query.range || "6h";
+
+  const rangeMap = {
+    "1h": 1,
+    "6h": 6,
+    "12h": 12,
+    "24h": 24
+  };
+
+  const hours = rangeMap[range] || 6;
+
+  const sql = `
+  SELECT
+    SPACE_SCORE,
+    CO2,
+    NOS,
+    TEMP,
+    HUM,
+    DUST_PM10,
+    DUST_PM25,
+    CREATE_AT
+  FROM home_status
+  WHERE CREATE_AT >= DATE_SUB(NOW(), INTERVAL ? HOUR)
+  ORDER BY CREATE_AT ASC
+`;
+  db.query(sql, [hours], (err, results) => {
+    if (err) {
+      console.error("통계 데이터 조회 실패:", err);
+      saveLog(`통계 데이터 조회 실패: ${err.message}`);
+
+      return res.status(500).json({
+        success: false,
+        message: "통계 데이터 조회 실패"
+      });
+    }
+
+    if (results.length === 0) {
+      return res.json({
+        success: false,
+        message: "해당 기간의 데이터가 없습니다."
+      });
+    }
+
+    const chartData = results.map((row) => {
+      return {
+        time: row.CREATE_AT,
+        score: Number(row.SPACE_SCORE),
+        co2: Number(row.CO2),
+        noise: Number(row.NOS),
+        temperature: Number(row.TEMP),
+        humidity: Number(row.HUM),
+        dustPm10: Number(row.DUST_PM10),
+        dustPm25: Number(row.DUST_PM25)
+      };
+    });
+
+    const avg = (key) => {
+      const sum = chartData.reduce((total, item) => total + item[key], 0);
+      return Number((sum / chartData.length).toFixed(1));
+    };
+
+    const avgScore = avg("score");
+    const avgCo2 = avg("co2");
+    const avgNoise = avg("noise");
+    const avgTemperature = avg("temperature");
+    const avgHumidity = avg("humidity");
+    const avgDustPm10 = avg("dustPm10");
+    const avgDustPm25 = avg("dustPm25");
+
+    const bestFocus = chartData.reduce((best, item) => {
+      return item.score > best.score ? item : best;
+    }, chartData[0]);
+
+    const highestCo2 = chartData.reduce((max, item) => {
+      return item.co2 > max.co2 ? item : max;
+    }, chartData[0]);
+
+    const comfortableCount = chartData.filter((item) => item.score >= 80).length;
+    const comfortableRate = Number(((comfortableCount / chartData.length) * 100).toFixed(1));
+
+    res.json({
+      success: true,
+      range: range,
+      data: {
+        chart: chartData,
+
+        summary: {
+          avgScore,
+          avgCo2,
+          avgNoise,
+          avgTemperature,
+          avgHumidity,
+          avgDustPm10,
+          avgDustPm25,
+          totalCount: chartData.length
+        },
+
+        insights: {
+          bestFocusTime: bestFocus.time,
+          bestFocusScore: bestFocus.score,
+
+          highestCo2Time: highestCo2.time,
+          highestCo2Value: highestCo2.co2,
+
+          comfortableRate,
+
+          message: `선택 기간 동안 평균 학습 지수는 ${avgScore}점이고, 쾌적 비율은 ${comfortableRate}%입니다.`
+        }
+      }
+    });
+
+    saveLog("통계 데이터 조회 성공");
+  });
+});
+
+// ================== 설정 조회 API ==================
+app.get("/settings", (req, res) => {
+  saveLog("/settings API 호출");
+
+  const sql = `
+    SELECT
+      dust_alert_enabled,
+      noise_alert_enabled,
+      alert_dust_threshold,
+      alert_noise_threshold,
+      theme_mode,
+      service_info
+    FROM app_settings
+    LIMIT 1
+  `;
+
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error("설정 조회 실패:", err);
+      saveLog(`설정 조회 실패: ${err.message}`);
+
+      return res.status(500).json({
+        success: false,
+        message: "설정 조회 실패"
+      });
+    }
+
+    if (results.length === 0) {
+      return res.json({
+        success: false,
+        message: "설정 데이터가 없습니다."
+      });
+    }
+
+    const data = results[0];
+
+    res.json({
+      success: true,
+      data: {
+        dustAlertEnabled: Boolean(data.dust_alert_enabled),
+        noiseAlertEnabled: Boolean(data.noise_alert_enabled),
+        dustThreshold: Number(data.alert_dust_threshold),
+        noiseThreshold: Number(data.alert_noise_threshold),
+        themeMode: data.theme_mode,
+        serviceInfo: data.service_info
+      }
+    });
+
+    saveLog("설정 조회 성공");
+  });
+});
+
+// ================== 설정 저장 API ==================
+app.put("/settings", (req, res) => {
+  saveLog("/settings 저장 API 호출");
+
+  const {
+    dustAlertEnabled,
+    noiseAlertEnabled,
+    dustThreshold,
+    noiseThreshold,
+    themeMode
+  } = req.body;
+
+  const sql = `
+    UPDATE app_settings
+    SET
+      dust_alert_enabled = ?,
+      noise_alert_enabled = ?,
+      alert_dust_threshold = ?,
+      alert_noise_threshold = ?,
+      theme_mode = ?
+    LIMIT 1
+  `;
+
+  const values = [
+    dustAlertEnabled ? 1 : 0,
+    noiseAlertEnabled ? 1 : 0,
+    Number(dustThreshold),
+    Number(noiseThreshold),
+    themeMode
+  ];
+
+  db.query(sql, values, (err) => {
+    if (err) {
+      console.error("설정 저장 실패:", err);
+      saveLog(`설정 저장 실패: ${err.message}`);
+
+      return res.status(500).json({
+        success: false,
+        message: "설정 저장 실패"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "설정이 저장되었습니다."
+    });
+
+    saveLog("설정 저장 성공");
   });
 });
 
