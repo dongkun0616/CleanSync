@@ -7,7 +7,6 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
-// ── 파티클 배경 ─────────────────────────────────────────────────
 const ParticleBg = ({ color }) => {
   const canvasRef = useRef(null);
 
@@ -66,7 +65,6 @@ const ParticleBg = ({ color }) => {
   );
 };
 
-// ── 글래스모피즘 미니 센서 카드 ───────────────────────────────────────────────────
 const GlassMiniCard = ({ icon, label, value, unit, color }) => (
   <div style={{
     backgroundColor: 'rgba(255,255,255,0.75)',
@@ -80,11 +78,36 @@ const GlassMiniCard = ({ icon, label, value, unit, color }) => (
     gap: '14px',
   }}>
     <div style={{
-      width: '42px', height: '42px', borderRadius: '10px',
+      width: '42px',
+      height: '42px',
+      borderRadius: '10px',
       backgroundColor: color + '18',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: '22px', flexShrink: 0,
-    }}>{icon}</div>
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+      overflow: 'hidden',
+    }}>
+      <img
+  src={icon}
+  alt={label}
+  style={{
+    width:
+      label === '온도' || label === '습도'
+        ? '70px'
+        : '32px',
+
+    height:
+      label === '온도' || label === '습도'
+        ? '70px'
+        : '32px',
+
+    objectFit: 'contain',
+    display: 'block',
+  }}
+/>
+    </div>
+
     <div>
       <div style={{ fontSize: '11px', color: '#8FA3B1', fontWeight: '600', marginBottom: '3px', letterSpacing: '0.5px' }}>
         {label}
@@ -99,7 +122,6 @@ const GlassMiniCard = ({ icon, label, value, unit, color }) => (
   </div>
 );
 
-// ── 메인 대시보드 컴포넌트 ────────────────────────────────────────────────
 const DashboardPage = () => {
   const navigate = useNavigate(); 
   const location = useLocation(); 
@@ -276,7 +298,6 @@ const DashboardPage = () => {
         * { font-family: 'Pretendard', sans-serif; }
       `}</style>
 
-      {/* ── 사이드바 ── */}
       <aside style={{
         width: '230px', minWidth: '230px', height: '100%',
         background: 'linear-gradient(180deg, #0F1623 0%, #161C2D 100%)',
@@ -326,7 +347,7 @@ const DashboardPage = () => {
             {label: '대시보드', sub: '실시간 센서', path: '/dashboard' },
             {label: '통계', sub: '기록 분석', path: '/analytics' }, 
             {label: '설정', sub: '환경 설정', path: '/settings' },
-          ].map(({ icon, label, sub, path }) => {
+          ].map(({ label, sub, path }) => {
             const isActive = location.pathname === path;
             return (
               <div key={label} onClick={() => navigate(path)} style={{
@@ -336,7 +357,6 @@ const DashboardPage = () => {
                 borderLeft: isActive ? `3px solid ${theme.color}` : '3px solid transparent',
                 transition: 'all 0.2s ease',
               }}>
-                <span style={{ fontSize: '18px' }}>{icon}</span>
                 <div>
                   <div style={{ fontSize: '13px', fontWeight: isActive ? '700' : '500', color: isActive ? '#FFF' : '#6B7A99' }}>{label}</div>
                   <div style={{ fontSize: '10px', color: '#4A5568', marginTop: '1px' }}>{sub}</div>
@@ -375,11 +395,11 @@ const DashboardPage = () => {
         </div>
 
         <div style={{ position: 'relative', zIndex: 1, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px' }}>
-          <GlassMiniCard icon="🌡️" label="온도" value={sensorData.temperature} unit="°C" color={theme.color} />
-          <GlassMiniCard icon="💧" label="습도" value={sensorData.humidity} unit="%" color={theme.color} />
-          <GlassMiniCard icon="💨" label="이산화탄소" value={sensorData.co2} unit="ppm" color={theme.color} />
-          <GlassMiniCard icon="🔊" label="소음" value={sensorData.noise} unit="dB" color={theme.color} />
-          <GlassMiniCard icon="😷" label="미세먼지(PM10)" value={sensorData.dustPm10} unit="㎍/㎥" color={theme.color} />
+          <GlassMiniCard icon="/temp-icon.png" label="온도" value={sensorData.temperature} unit="°C" color={theme.color} />
+          <GlassMiniCard icon="/hum-icon.png" label="습도" value={sensorData.humidity} unit="%" color={theme.color} />
+          <GlassMiniCard icon="/co2-icon.png" label="이산화탄소" value={sensorData.co2} unit="ppm" color={theme.color} />
+          <GlassMiniCard icon="/noise-icon.png" label="소음" value={sensorData.noise} unit="dB" color={theme.color} />
+          <GlassMiniCard icon="/dust-icon.png" label="미세먼지(PM10)" value={sensorData.dustPm10} unit="㎍/㎥" color={theme.color} />
         </div>
 
         <div style={{
@@ -391,7 +411,6 @@ const DashboardPage = () => {
           boxShadow: '0 8px 32px rgba(0,0,0,0.05)',
           display: 'flex', flexDirection: 'column'
         }}>
-          {/* ... (차트 및 로그 테이블 부분 기존 동일) */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: theme.color, display: 'inline-block' }} />
@@ -420,6 +439,7 @@ const DashboardPage = () => {
               ))}
             </div>
           </div>
+
           {activeTab === 'dust' && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', gap: '6px' }}>
               <button
@@ -440,6 +460,7 @@ const DashboardPage = () => {
               >● 초미세먼지 (PM2.5)</button>
             </div>
           )}
+
           <div style={{ height: '240px', width: '100%' }}>
             <Line data={generateChartConfig()} options={chartOptions} />
           </div>

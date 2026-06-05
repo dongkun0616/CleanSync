@@ -363,10 +363,22 @@ const DashboardMobPage = () => {
                   }}
                 >
                   <img
-                    src={s.icon}
-                    alt={s.label}
-                    style={{ width: '28px', height: '28px', objectFit: 'contain' }}
-                  />
+  src={s.icon}
+  alt={s.label}
+  style={{
+    width:
+      s.key === 'temp' || s.key === 'humi'
+        ? '70px'
+        : '28px',
+
+    height:
+      s.key === 'temp' || s.key === 'humi'
+        ? '70px'
+        : '28px',
+
+    objectFit: 'contain'
+  }}
+/>
                   <div
                     style={{
                       fontSize: '11px',

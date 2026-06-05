@@ -354,10 +354,22 @@ const HomeMobPage = () => {
           }}
         >
           <img
-            src={item.icon}
-            alt={item.label}
-            style={{ width: '32px', height: '32px', objectFit: 'contain' }}
-          />
+  src={item.icon}
+  alt={item.label}
+  style={{
+    width:
+      item.label === '온도' || item.label === '습도'
+        ? '70px'
+        : '32px',
+
+    height:
+      item.label === '온도' || item.label === '습도'
+        ? '70px'
+        : '32px',
+
+    objectFit: 'contain'
+  }}
+/>
           <div style={{ flex: 1, fontWeight: '600' }}>{item.label}</div>
           <div style={{ fontWeight: '800', fontFamily: "'DM Mono', monospace" }}>
             {item.val}
