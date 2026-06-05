@@ -1117,3 +1117,61 @@
     text-align: left !important;
   }
 }
+@media (min-width: 769px) {
+  .settings-with-sidebar {
+    background: var(--settings-bg) !important;
+  }
+
+  .settings-with-sidebar .settings-page {
+    background: var(--settings-bg) !important;
+    position: relative !important;
+  }
+
+  .settings-with-sidebar .settings-page::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 230px;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 0;
+
+    background-image:
+      radial-gradient(circle, rgba(var(--settings-rgb), 0.22) 0 5px, transparent 6px),
+      radial-gradient(circle, rgba(var(--settings-rgb), 0.16) 0 3px, transparent 4px),
+      radial-gradient(circle, rgba(var(--settings-rgb), 0.12) 0 2px, transparent 3px);
+
+    background-size: 260px 260px, 180px 180px, 120px 120px;
+    background-position: 40px 80px, 120px 30px, 70px 160px;
+  }
+
+  .settings-header,
+  .settings-layout {
+    position: relative !important;
+    z-index: 1 !important;
+  }
+
+  .settings-sidebar-logo-icon {
+    background: linear-gradient(
+      135deg,
+      var(--settings-color),
+      color-mix(in srgb, var(--settings-color) 55%, transparent)
+    ) !important;
+    box-shadow: 0 4px 12px rgba(var(--settings-rgb), 0.28) !important;
+  }
+
+  .score-number,
+  .score-status {
+    color: var(--settings-color) !important;
+  }
+
+  .settings-sidebar-nav a.active {
+    background: linear-gradient(
+      90deg,
+      rgba(var(--settings-rgb), 0.14),
+      transparent
+    ) !important;
+    border-left: 3px solid var(--settings-color) !important;
+  }
+}

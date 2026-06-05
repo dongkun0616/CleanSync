@@ -21,6 +21,36 @@ const defaultProfile = {
   space: "101호",
 };
 
+const getTheme = (score) => {
+  if (score >= 80) {
+    return {
+      color: "#10B981",
+      bg: "linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)",
+      rgb: "16, 185, 129",
+    };
+  }
+
+  if (score >= 60) {
+    return {
+      color: "#F59E0B",
+      bg: "linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)",
+      rgb: "245, 158, 11",
+    };
+  }
+
+  return {
+    color: "#EF4444",
+    bg: "linear-gradient(135deg, #FEE2E2 0%, #FFF5F5 100%)",
+    rgb: "239, 68, 68",
+  };
+};
+
+const getStatusText = (score) => {
+  if (score >= 80) return "쾌적";
+  if (score >= 60) return "보통";
+  return "혼잡";
+};
+
 const normalizeSettingsFromApi = (data) => ({
   emailAlert: Boolean(
     data.emailAlert ??
@@ -119,32 +149,51 @@ function SettingsPage() {
   const [mobileSettingPage, setMobileSettingPage] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const [settings, setSettings] = useState(defaultSettings);
-  const [profile, setProfile] = useState(defaultProfile);
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem("cleanSyncSettings");
+    return saved ? JSON.parse(saved) : defaultSettings;
+  });
 
-  const [devices, setDevices] = useState([
-    {
-      id: 1,
-      name: "교실 A 센서",
-      location: "3층 301호",
-      time: "방금 전",
-      status: "연결됨",
-    },
-    {
-      id: 2,
-      name: "도서관 센서",
-      location: "2층 열람실",
-      time: "1분 전",
-      status: "연결됨",
-    },
-    {
-      id: 3,
-      name: "복도 센서",
-      location: "3층 복도",
-      time: "2시간 전",
-      status: "오프라인",
-    },
-  ]);
+  const [profile, setProfile] = useState(() => {
+    const saved = localStorage.getItem("cleanSyncProfile");
+    return saved ? JSON.parse(saved) : defaultProfile;
+  });
+
+  const [score, setScore] = useState(45);
+  const [lastUpdate, setLastUpdate] = useState(null);
+
+  const theme = getTheme(score);
+  const statusText = getStatusText(score);
+
+  const [devices, setDevices] = useState(() => {
+    const saved = localStorage.getItem("cleanSyncDevices");
+
+    return saved
+      ? JSON.parse(saved)
+      : [
+          {
+            id: 1,
+            name: "교실 A 센서",
+            location: "3층 301호",
+            time: "방금 전",
+            status: "연결됨",
+          },
+          {
+            id: 2,
+            name: "도서관 센서",
+            location: "2층 열람실",
+            time: "1분 전",
+            status: "연결됨",
+          },
+          {
+            id: 3,
+            name: "복도 센서",
+            location: "3층 복도",
+            time: "2시간 전",
+            status: "오프라인",
+          },
+        ];
+  });
 
   const [showDeviceModal, setShowDeviceModal] = useState(false);
   const [newDevice, setNewDevice] = useState({
@@ -153,6 +202,14 @@ function SettingsPage() {
   });
 
   const activeSetting = mobileSettingPage || settingTab;
+
+  const formatTime = (date) => {
+    if (!date) return "--:--:--";
+
+    return `${String(date.getHours()).padStart(2, "0")}:${String(
+      date.getMinutes()
+    ).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
+  };
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -165,8 +222,10 @@ function SettingsPage() {
 
         const result = await response.json();
         const apiData = result.data || result;
+        const apiSettings = normalizeSettingsFromApi(apiData);
 
-        setSettings(normalizeSettingsFromApi(apiData));
+        setSettings(apiSettings);
+        localStorage.setItem("cleanSyncSettings", JSON.stringify(apiSettings));
       } catch (error) {
         console.error("설정 불러오기 실패:", error);
       }
@@ -182,8 +241,10 @@ function SettingsPage() {
 
         const result = await response.json();
         const apiData = result.data || result;
+        const apiProfile = normalizeProfileFromApi(apiData);
 
-        setProfile(normalizeProfileFromApi(apiData));
+        setProfile(apiProfile);
+        localStorage.setItem("cleanSyncProfile", JSON.stringify(apiProfile));
       } catch (error) {
         console.error("프로필 불러오기 실패:", error);
       }
@@ -202,15 +263,53 @@ function SettingsPage() {
 
         if (Array.isArray(apiData)) {
           setDevices(apiData);
+          localStorage.setItem("cleanSyncDevices", JSON.stringify(apiData));
         }
       } catch (error) {
         console.error("기기 목록 불러오기 실패:", error);
       }
     };
 
+    const loadScore = async () => {
+      try {
+        const response = await fetch("/api/home");
+        const result = await response.json();
+
+        if (result?.success && result?.data) {
+          setScore(Number(result.data.score || 45));
+          setLastUpdate(new Date());
+          return;
+        }
+      } catch (error) {
+        console.error("점수 불러오기 실패:", error);
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/home-status`);
+        if (!response.ok) return;
+
+        const result = await response.json();
+        const data = result.data || result;
+
+        if (data.spaceScore) {
+          setScore(Number(data.spaceScore));
+        } else if (data.SPACE_SCORE) {
+          setScore(Number(data.SPACE_SCORE));
+        }
+
+        setLastUpdate(new Date());
+      } catch (error) {
+        console.error("AWS 점수 불러오기 실패:", error);
+      }
+    };
+
     loadSettings();
     loadProfile();
     loadDevices();
+    loadScore();
+
+    const interval = setInterval(loadScore, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleSettingChange = (key, value) => {
@@ -228,6 +327,8 @@ function SettingsPage() {
   };
 
   const saveSettings = async () => {
+    localStorage.setItem("cleanSyncSettings", JSON.stringify(settings));
+
     try {
       const response = await fetch(`${API_BASE_URL}/settings`, {
         method: "PUT",
@@ -241,14 +342,16 @@ function SettingsPage() {
         throw new Error("설정 저장 실패");
       }
 
-      alert("설정이 서버에 저장되었습니다.");
+      alert("설정이 저장되었습니다.");
     } catch (error) {
       console.error("설정 저장 실패:", error);
-      alert("설정 저장 중 오류가 발생했습니다.");
+      alert("서버 저장은 실패했지만 브라우저에는 저장되었습니다.");
     }
   };
 
   const saveProfile = async () => {
+    localStorage.setItem("cleanSyncProfile", JSON.stringify(profile));
+
     try {
       const response = await fetch(`${API_BASE_URL}/settings/profile`, {
         method: "PUT",
@@ -262,15 +365,18 @@ function SettingsPage() {
         throw new Error("프로필 저장 실패");
       }
 
-      alert("프로필이 서버에 저장되었습니다.");
+      alert("프로필이 저장되었습니다.");
     } catch (error) {
       console.error("프로필 저장 실패:", error);
-      alert("프로필 저장 중 오류가 발생했습니다.");
+      alert("서버 저장은 실패했지만 브라우저에는 저장되었습니다.");
     }
   };
 
   const deleteDevice = (id) => {
-    setDevices(devices.filter((device) => device.id !== id));
+    const updatedDevices = devices.filter((device) => device.id !== id);
+
+    setDevices(updatedDevices);
+    localStorage.setItem("cleanSyncDevices", JSON.stringify(updatedDevices));
   };
 
   const addDevice = async () => {
@@ -287,6 +393,11 @@ function SettingsPage() {
       status: "연결됨",
     };
 
+    const updatedDevices = [...devices, device];
+
+    setDevices(updatedDevices);
+    localStorage.setItem("cleanSyncDevices", JSON.stringify(updatedDevices));
+
     try {
       const response = await fetch(`${API_BASE_URL}/settings/devices`, {
         method: "PUT",
@@ -297,7 +408,7 @@ function SettingsPage() {
           deviceName: device.name,
           deviceLocation: device.location,
           deviceStatus: device.status,
-          devices: [...devices, device],
+          devices: updatedDevices,
         }),
       });
 
@@ -305,17 +416,26 @@ function SettingsPage() {
         throw new Error("기기 저장 실패");
       }
 
-      setDevices([...devices, device]);
       setNewDevice({ name: "", location: "" });
       setShowDeviceModal(false);
+      alert("기기가 추가되었습니다.");
     } catch (error) {
       console.error("기기 저장 실패:", error);
-      alert("기기 저장 중 오류가 발생했습니다.");
+      setNewDevice({ name: "", location: "" });
+      setShowDeviceModal(false);
+      alert("서버 저장은 실패했지만 브라우저에는 저장되었습니다.");
     }
   };
 
   return (
-    <div className="settings-with-sidebar">
+    <div
+      className="settings-with-sidebar"
+      style={{
+        "--settings-bg": theme.bg,
+        "--settings-color": theme.color,
+        "--settings-rgb": theme.rgb,
+      }}
+    >
       <aside className="settings-pc-sidebar">
         <div className="settings-sidebar-logo">
           <div className="settings-sidebar-logo-icon">⚡</div>
@@ -333,10 +453,10 @@ function SettingsPage() {
           </div>
 
           <div className="score-number">
-            45 <span>/ 100</span>
+            {score} <span>/ 100</span>
           </div>
 
-          <div className="score-status">혼잡</div>
+          <div className="score-status">{statusText}</div>
         </div>
 
         <nav className="settings-sidebar-nav">
@@ -361,7 +481,9 @@ function SettingsPage() {
           </NavLink>
         </nav>
 
-        <div className="settings-sidebar-footer">마지막 업데이트 03:42:19</div>
+        <div className="settings-sidebar-footer">
+          마지막 업데이트 {formatTime(lastUpdate)}
+        </div>
       </aside>
 
       <div className="settings-page">
@@ -372,7 +494,7 @@ function SettingsPage() {
           </div>
 
           <div className="settings-mobile-right">
-            <span className="settings-mobile-score">● 88</span>
+            <span className="settings-mobile-score">● {score}</span>
             <button
               className="settings-mobile-menu"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -393,7 +515,7 @@ function SettingsPage() {
               }
               onClick={() => setMobileMenuOpen(false)}
             >
-              <span>⌂</span>
+              <span></span>
               <div>
                 <b>홈</b>
                 <p>현재 상태</p>
@@ -409,7 +531,7 @@ function SettingsPage() {
               }
               onClick={() => setMobileMenuOpen(false)}
             >
-              <span>▦</span>
+              <span></span>
               <div>
                 <b>대시보드</b>
                 <p>실시간 센서</p>
@@ -425,7 +547,7 @@ function SettingsPage() {
               }
               onClick={() => setMobileMenuOpen(false)}
             >
-              <span>▥</span>
+              <span></span>
               <div>
                 <b>통계</b>
                 <p>기록 분석</p>
@@ -441,7 +563,7 @@ function SettingsPage() {
               }
               onClick={() => setMobileMenuOpen(false)}
             >
-              <span>⚙</span>
+              <span></span>
               <div>
                 <b>설정</b>
                 <p>환경 설정</p>
