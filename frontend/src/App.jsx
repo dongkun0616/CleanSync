@@ -32,7 +32,7 @@ function AppLayout({ isMobile }) {
 
           <div className="sidebar-score-card">
             <div className="sidebar-score-top">
-              <span>종합 지수</span>
+              <span>학습 지수</span>
               <span className="sidebar-live">● LIVE</span>
             </div>
 
@@ -62,9 +62,7 @@ function AppLayout({ isMobile }) {
             </NavLink>
           </nav>
 
-          <div className="sidebar-update">
-            마지막 업데이트 02:10:00
-          </div>
+          <div className="sidebar-update">마지막 업데이트 02:10:00</div>
         </aside>
       )}
 
@@ -93,7 +91,7 @@ function AppLayout({ isMobile }) {
   );
 }
 
-function App() {
+function AppContent() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   useEffect(() => {
@@ -105,9 +103,13 @@ function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  return <AppLayout isMobile={isMobile} />;
+}
+
+function App() {
   return (
     <Router>
-      <AppLayout isMobile={isMobile} />
+      <AppContent />
     </Router>
   );
 }
