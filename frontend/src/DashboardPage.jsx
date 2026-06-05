@@ -322,10 +322,10 @@ const DashboardPage = () => {
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
           {[
-            { icon: '🏠', label: '홈', sub: '현재 상태', path: '/' },
-            { icon: '📊', label: '대시보드', sub: '실시간 센서', path: '/dashboard' },
-            { icon: '📈', label: '통계', sub: '기록 분석', path: '/analytics' }, 
-            { icon: '⚙️', label: '설정', sub: '환경 설정', path: '/settings' },
+            {label: '홈', sub: '현재 상태', path: '/' },
+            {label: '대시보드', sub: '실시간 센서', path: '/dashboard' },
+            {label: '통계', sub: '기록 분석', path: '/analytics' }, 
+            {label: '설정', sub: '환경 설정', path: '/settings' },
           ].map(({ icon, label, sub, path }) => {
             const isActive = location.pathname === path;
             return (

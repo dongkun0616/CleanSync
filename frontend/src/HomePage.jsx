@@ -112,6 +112,7 @@ const ParticleBg = ({ color }) => {
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let raf;
 
@@ -137,7 +138,8 @@ const ParticleBg = ({ color }) => {
       particles.forEach((p) => {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = color + Math.floor(p.alpha * 255).toString(16).padStart(2, '0');
+        const hexColor = color.replace('#', '');
+        ctx.fillStyle = '#' + hexColor + Math.floor(p.alpha * 255).toString(16).padStart(2, '0');
         ctx.fill();
         p.x += p.dx;
         p.y += p.dy;
@@ -165,7 +167,7 @@ const ParticleBg = ({ color }) => {
 };
 
 // ── 3. 개별 센서 카드 컴포넌트 ───────────────────────────────────────────
-const SensorCard = ({ icon, label, value, unit, color }) => (
+const SensorCard = ({ icon, label, value, unit, color, iconSize }) => (
   <div style={{
     backgroundColor: 'rgba(255,255,255,0.85)',
     backdropFilter: 'blur(12px)',
@@ -178,11 +180,20 @@ const SensorCard = ({ icon, label, value, unit, color }) => (
     gap: '12px',
   }}>
     <div style={{
-      width: '40px', height: '40px', borderRadius: '10px',
+      width: '44px', height: '44px', borderRadius: '12px',
       backgroundColor: color + '18',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: '20px', flexShrink: 0,
-    }}>{icon}</div>
+      flexShrink: 0,
+    }}>
+      {React.cloneElement(icon, {
+        style: { 
+          ...icon.props.style, 
+          width: iconSize || '24px', 
+          height: iconSize || '24px', 
+          objectFit: 'contain' 
+        }
+      })}
+    </div>
     <div>
       <div style={{ fontSize: '11px', color: '#8FA3B1', fontWeight: '600', marginBottom: '2px', letterSpacing: '0.5px' }}>
         {label}
@@ -196,6 +207,9 @@ const SensorCard = ({ icon, label, value, unit, color }) => (
     </div>
   </div>
 );
+
+// 공통 이미지 아이콘 스타일
+const iconStyle = { width: '24px', height: '24px', objectFit: 'contain' };
 
 // ── 4. 메인 HomePage 컴포넌트 ────────────────────────────────────────────────
 const HomePage = () => {
@@ -217,7 +231,6 @@ const HomePage = () => {
 
   const fetchData = async () => {
     try {
-      // 환경 변수 기반 API 주소 사용
       const response = await fetch('/api/home');
       const result = await response.json();
 
@@ -247,12 +260,6 @@ const HomePage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
   const getTheme = (score) => {
     if (score >= 80) return { color: '#10B981', bg: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)' };
     if (score >= 60) return { color: '#F59E0B', bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
@@ -273,7 +280,6 @@ const HomePage = () => {
       <style>{`
         @import url('https://webfontworld.github.io/pretendard/Pretendard.css');
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
-        
         * { font-family: 'Pretendard', sans-serif; }
       `}</style>
 
@@ -323,10 +329,10 @@ const HomePage = () => {
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
           {[
-            { icon: '🏠', label: '홈', sub: '현재 상태', path: '/' },
-            { icon: '📊', label: '대시보드', sub: '실시간 센서', path: '/dashboard' },
-            { icon: '📈', label: '통계', sub: '기록 분석', path: '/analytics' },
-            { icon: '⚙️', label: '설정', sub: '환경 설정', path: '/settings' },
+            {label: '홈', sub: '현재 상태', path: '/' },
+            {label: '대시보드', sub: '실시간 센서', path: '/dashboard' },
+            {label: '통계', sub: '기록 분석', path: '/analytics' },
+            {label: '설정', sub: '환경 설정', path: '/settings' },
           ].map(({ icon, label, sub, path }) => {
             const isActive = location.pathname === path;
             return (
@@ -396,8 +402,8 @@ const HomePage = () => {
             border: '1px solid rgba(255,255,255,0.7)',
             boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <span style={{ fontSize: '14px' }}>🤖</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <img src="/ai-icon.png" style={{ width: '22px', height: '22px' }} alt="AI" />
               <span style={{ fontSize: '12px', color: '#8FA3B1', fontWeight: '600', letterSpacing: '0.5px' }}>AI 가이드</span>
             </div>
             <div style={{ fontSize: '14px', color: '#4A5568', lineHeight: 1.7 }}>
@@ -406,12 +412,12 @@ const HomePage = () => {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <SensorCard icon="🌡️" label="온도" value={sensorData.temperature} unit="°C" color={theme.color} />
-            <SensorCard icon="💧" label="습도" value={sensorData.humidity} unit="%" color={theme.color} />
-            <SensorCard icon="💨" label="이산화탄소(CO₂)" value={sensorData.co2} unit="ppm" color={theme.color} />
-            <SensorCard icon="🔊" label="소음" value={sensorData.noise} unit="dB" color={theme.color} />
-            <SensorCard icon="😷" label="미세먼지(PM10)" value={sensorData.dustPm10} unit="㎍/㎥" color={theme.color} />
-            <SensorCard icon="🌫️" label="초미세먼지(PM2.5)" value={sensorData.dustPm25} unit="㎍/㎥" color={theme.color} />
+            <SensorCard icon={<img src="/temp-icon.png" style={iconStyle} />} iconSize="70px" label="온도" value={sensorData.temperature} unit="°C" color={theme.color} />
+            <SensorCard icon={<img src="/hum-icon.png" style={iconStyle} />} iconSize="70px" label="습도" value={sensorData.humidity} unit="%" color={theme.color} />
+            <SensorCard icon={<img src="/co2-icon.png" style={iconStyle} />} label="이산화탄소(CO₂)" value={sensorData.co2} unit="ppm" color={theme.color} />
+            <SensorCard icon={<img src="/noise-icon.png" style={iconStyle} />} label="소음" value={sensorData.noise} unit="dB" color={theme.color} />
+            <SensorCard icon={<img src="/dust-icon.png" style={iconStyle} />} label="미세먼지(PM10)" value={sensorData.dustPm10} unit="㎍/㎥" color={theme.color} />
+            <SensorCard icon={<img src="/dustpm-icon.png" style={iconStyle} />} label="초미세먼지(PM2.5)" value={sensorData.dustPm25} unit="㎍/㎥" color={theme.color} />
           </div>
         </div>
       </main>
