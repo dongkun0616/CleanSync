@@ -1,11 +1,34 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
+
 import "./App.css";
 
-function App() {
-  const [activePage, setActivePage] = useState("home");
+function AppContent() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getPageFromPath = () => {
+    if (location.pathname === "/dashboard") return "dashboard";
+    if (location.pathname === "/analytics") return "stats";
+    if (location.pathname === "/settings") return "settings";
+    return "home";
+  };
+
+  const [activePage, setActivePage] = useState(getPageFromPath());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [settingTab, setSettingTab] = useState("alarm");
   const [mobileSettingPage, setMobileSettingPage] = useState(null);
+
+  useEffect(() => {
+    setActivePage(getPageFromPath());
+  }, [location.pathname]);
 
   const [devices, setDevices] = useState([
     {
@@ -52,6 +75,11 @@ function App() {
     setActivePage(page);
     setMobileMenuOpen(false);
     setMobileSettingPage(null);
+
+    if (page === "home") navigate("/home");
+    if (page === "dashboard") navigate("/dashboard");
+    if (page === "stats") navigate("/analytics");
+    if (page === "settings") navigate("/settings");
   };
 
   const deleteDevice = (id) => {
@@ -375,7 +403,9 @@ function App() {
               <div className="settings-side-menu">
                 <button
                   className={
-                    settingTab === "alarm" ? "settings-tab active" : "settings-tab"
+                    settingTab === "alarm"
+                      ? "settings-tab active"
+                      : "settings-tab"
                   }
                   onClick={() => setSettingTab("alarm")}
                 >
@@ -385,7 +415,9 @@ function App() {
 
                 <button
                   className={
-                    settingTab === "device" ? "settings-tab active" : "settings-tab"
+                    settingTab === "device"
+                      ? "settings-tab active"
+                      : "settings-tab"
                   }
                   onClick={() => setSettingTab("device")}
                 >
@@ -654,7 +686,10 @@ function App() {
                               취소
                             </button>
 
-                            <button className="confirm-device-btn" onClick={addDevice}>
+                            <button
+                              className="confirm-device-btn"
+                              onClick={addDevice}
+                            >
                               추가
                             </button>
                           </div>
@@ -695,6 +730,21 @@ function App() {
         )}
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Navigate to="/home" replace />} />
+        <Route path="/home" element={<AppContent />} />
+        <Route path="/dashboard" element={<AppContent />} />
+        <Route path="/analytics" element={<AppContent />} />
+        <Route path="/settings" element={<AppContent />} />
+        <Route path="*" element={<Navigate to="/home" replace />} />
+      </Routes>
+    </Router>
   );
 }
 
