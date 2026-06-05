@@ -3,10 +3,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 // 페이지 컴포넌트 import
 import HomePage from './HomePage';
-import HomeMobPage from './HomeMobPage'; // 👈 파일명과 일치하게 수정!
+import HomeMobPage from './HomeMobPage'; 
 import DashboardPage from './DashboardPage'; 
 import DashboardMobPage from './DashboardMobPage'; 
 import AnalyticsPage from './AnalyticsPage';
+import AnalyticsMobPage from './AnalyticsMobPage'; // ⭐ 1. 모바일 통계 페이지 불러오기 추가!
 import SettingsPage from './SettingsPage';
 
 function App() {
@@ -38,8 +39,11 @@ function App() {
           element={isMobile ? <DashboardMobPage /> : <DashboardPage />} 
         />
 
-        {/* 통계 페이지 */}
-        <Route path="/analytics" element={<AnalyticsPage />} />
+        {/* ⭐ 2. 통계 페이지 (여기에도 모바일 분기 처리 적용 완료!) */}
+        <Route 
+          path="/analytics" 
+          element={isMobile ? <AnalyticsMobPage /> : <AnalyticsPage />} 
+        />
 
         {/* 설정 페이지 */}
         <Route path="/settings" element={<SettingsPage />} />
