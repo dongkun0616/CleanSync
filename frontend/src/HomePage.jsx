@@ -208,7 +208,6 @@ const SensorCard = ({ icon, label, value, unit, color, iconSize }) => (
   </div>
 );
 
-// 공통 이미지 아이콘 스타일
 const iconStyle = { width: '24px', height: '24px', objectFit: 'contain' };
 
 // ── 4. 메인 HomePage 컴포넌트 ────────────────────────────────────────────────
@@ -228,6 +227,24 @@ const HomePage = () => {
     dustPm25: 0,
   });
   const [lastUpdate, setLastUpdate] = useState(null);
+
+  // 브라우저 확대/축소 방지
+  useEffect(() => {
+    const handleWheel = (e) => {
+      if (e.ctrlKey || e.metaKey) e.preventDefault();
+    };
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '0')) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -283,7 +300,6 @@ const HomePage = () => {
         * { font-family: 'Pretendard', sans-serif; }
       `}</style>
 
-      {/* ── 사이드바 ── */}
       <aside style={{
         width: '230px', minWidth: '230px', height: '100%',
         background: 'linear-gradient(180deg, #0F1623 0%, #161C2D 100%)',
@@ -327,38 +343,48 @@ const HomePage = () => {
           </div>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-          {[
-            {label: '홈', sub: '현재 상태', path: '/' },
-            {label: '대시보드', sub: '실시간 센서', path: '/dashboard' },
-            {label: '통계', sub: '기록 분석', path: '/analytics' },
-            {label: '설정', sub: '환경 설정', path: '/settings' },
-          ].map(({ icon, label, sub, path }) => {
-            const isActive = location.pathname === path;
-            return (
-              <div key={label} onClick={() => navigate(path)} style={{
-                display: 'flex', alignItems: 'center', gap: '12px',
-                padding: '12px 14px', borderRadius: '10px', cursor: 'pointer',
-                background: isActive ? `linear-gradient(90deg, ${theme.color}22, transparent)` : 'transparent',
-                borderLeft: isActive ? `3px solid ${theme.color}` : '3px solid transparent',
-                transition: 'all 0.2s ease',
-              }}>
-                <span style={{ fontSize: '18px' }}>{icon}</span>
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: isActive ? '700' : '500', color: isActive ? '#FFF' : '#6B7A99' }}>{label}</div>
-                  <div style={{ fontSize: '10px', color: '#4A5568', marginTop: '1px' }}>{sub}</div>
-                </div>
-              </div>
-            );
-          })}
-        </nav>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}> {/* gap을 조절하여 간격을 넓혔습니다 */}
+  {[
+    { label: '홈', sub: '현재 상태', path: '/' },
+    { label: '대시보드', sub: '실시간 센서', path: '/dashboard' },
+    { label: '통계', sub: '기록 분석', path: '/analytics' },
+    { label: '설정', sub: '환경 설정', path: '/settings' },
+  ].map(({ label, sub, path }) => {
+    const isActive = location.pathname === path;
+    return (
+      <div 
+        key={label} 
+        onClick={() => navigate(path)} 
+        style={{ 
+          display: 'flex', 
+          flexDirection: 'column', // 세로 정렬로 변경
+          alignItems: 'center',    // 가로축 가운데 정렬
+          justifyContent: 'center',
+          padding: '12px 14px', 
+          borderRadius: '10px', 
+          cursor: 'pointer', 
+          background: isActive ? `linear-gradient(90deg, ${theme.color}22, transparent)` : 'transparent', 
+          borderLeft: isActive ? `3px solid ${theme.color}` : '3px solid transparent', 
+          transition: 'all 0.2s ease',
+          textAlign: 'center'      // 텍스트 가운데 정렬
+        }}
+      >
+        <div style={{ fontSize: '13px', fontWeight: isActive ? '700' : '500', color: isActive ? '#FFF' : '#6B7A99' }}>
+          {label}
+        </div>
+        <div style={{ fontSize: '10px', color: '#4A5568', marginTop: '4px' }}>
+          {sub}
+        </div>
+      </div>
+    );
+  })}
+</nav>
 
         <div style={{ fontSize: '10px', color: '#3D4F6E', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           마지막 업데이트 {formatTime(lastUpdate)}
         </div>
       </aside>
 
-      {/* ── 메인 패널 ── */}
       <main style={{
         flex: 1, position: 'relative', overflow: 'hidden',
         background: theme.bg, transition: 'background 0.8s ease',

@@ -169,6 +169,7 @@ app.get("/analytics", (req, res) => {
 
   const hours = rangeMap[range] || 6;
 
+  // 수정: NOW() 대신 DB 내 가장 최근 데이터의 시간을 기준으로 조회하도록 변경
   const sql = `
     SELECT
       id,
@@ -185,7 +186,7 @@ app.get("/analytics", (req, res) => {
       ANALYSIS_TEXT,
       ALERT_TYPE
     FROM ${LOG_TABLE}
-    WHERE CREATE_AT >= DATE_SUB(NOW(), INTERVAL ? HOUR)
+    WHERE CREATE_AT >= DATE_SUB((SELECT MAX(CREATE_AT) FROM ${LOG_TABLE}), INTERVAL ? HOUR)
     ORDER BY CREATE_AT ASC
   `;
 
@@ -272,34 +273,13 @@ app.get("/analytics", (req, res) => {
     ];
 
     const summary = {
-      co2: {
-        avg: avg("CO2"),
-        unit: "ppm"
-      },
-      temperature: {
-        avg: avg("TEMP"),
-        unit: "°C"
-      },
-      humidity: {
-        avg: avg("HUM"),
-        unit: "%"
-      },
-      noise: {
-        avg: avg("NOS"),
-        unit: "dB"
-      },
-      dustPm10: {
-        avg: avg("DUST_PM10"),
-        unit: "㎍/m³"
-      },
-      dustPm25: {
-        avg: avg("DUST_PM25"),
-        unit: "㎍/m³"
-      },
-      spaceScore: {
-        avg: avg("SPACE_SCORE"),
-        unit: "점"
-      }
+      co2: { avg: avg("CO2"), unit: "ppm" },
+      temperature: { avg: avg("TEMP"), unit: "°C" },
+      humidity: { avg: avg("HUM"), unit: "%" },
+      noise: { avg: avg("NOS"), unit: "dB" },
+      dustPm10: { avg: avg("DUST_PM10"), unit: "㎍/m³" },
+      dustPm25: { avg: avg("DUST_PM25"), unit: "㎍/m³" },
+      spaceScore: { avg: avg("SPACE_SCORE"), unit: "점" }
     };
 
     res.json({
