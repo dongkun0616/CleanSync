@@ -83,7 +83,8 @@ const GlassMiniCard = ({ icon, label, value, unit, color }) => (
     display: 'flex', alignItems: 'center', gap: '14px',
   }}>
     <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
-      <img src={icon} alt={label} style={{ width: label === '온도' || label === '습도' ? '70px' : '32px', height: label === '온도' || label === '습도' ? '70px' : '32px', objectFit: 'contain', display: 'block' }} />
+      {/* 여기서 크기를 32px로 통일했습니다 */}
+      <img src={icon} alt={label} style={{ width: '32px', height: '32px', objectFit: 'contain', display: 'block' }} />
     </div>
     <div>
       <div style={{ fontSize: '11px', color: '#8FA3B1', fontWeight: '600', marginBottom: '3px', letterSpacing: '0.5px' }}>{label}</div>

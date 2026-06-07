@@ -5,6 +5,9 @@ import * as Utils from './SettingsUtils';
 import { AlarmTab, DeviceTab, ProfileTab } from './components/Tabs';
 import './SettingsPage.css';
 
+// 🚨 API 주소 안전 장치: 환경변수가 없으면 기본 백엔드 주소를 사용합니다.
+const API_BASE = import.meta.env.VITE_API_URL || "http://13.124.252.181";
+
 // 파티클 배경 컴포넌트
 const ParticleBg = ({ color }) => {
   const canvasRef = useRef(null);
@@ -68,10 +71,8 @@ const SettingsPage = () => {
   const [isLocked, setIsLocked] = useState(true);
   const [lastUpdate] = useState(new Date());
 
-  // 🚨 기기 연결 상태 판별
   const isConnected = devices.length > 0;
 
-  // 🚨 다른 페이지와 동일한 테마 색상 로직 적용 (OFFLINE 상태 지원)
   const getTheme = (score, isConnected) => {
     if (!isConnected) return { color: '#94A3B8', bg: 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)' };
     if (score >= 90) return { color: "#059669", bg: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)' };
@@ -82,7 +83,6 @@ const SettingsPage = () => {
   };
   const theme = getTheme(score, isConnected);
 
-  // 🚨 줌 방지 로직 적용
   useEffect(() => {
     const handleWheel = (e) => { if (e.ctrlKey || e.metaKey) e.preventDefault(); };
     const handleKeyDown = (e) => { if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '0')) e.preventDefault(); };
@@ -94,16 +94,13 @@ const SettingsPage = () => {
     };
   }, []);
 
-  // 데이터 불러오기 함수
   const fetchData = async () => {
     try {
-      // 1. Vite 환경변수 적용 (GET)
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/settings?userName=${initialUserName}&location=${locationName}`);
+      const res = await axios.get(`${API_BASE}/settings?userName=${initialUserName}&location=${locationName}`);
       
       if (res.data && res.data.success) {
         const { currentStatus, alerts, devices: deviceData, profile: profileData } = res.data.data;
         
-        // 프로필 정보와 알림 설정 화면에 반영
         setSettings({
           emailAlert: alerts.emailAlertEnabled,
           pushAlert: alerts.pushAlertEnabled,
@@ -121,17 +118,11 @@ const SettingsPage = () => {
           userSpace: profileData.userSpace || ''
         });
 
-        // 잠금 상태(isLocked) 결정: 프로필이 있고, 기기도 연결되어 있어야 알림 설정 가능
         const hasProfile = profileData.userName && profileData.userEmail;
         const hasDevice = deviceData && deviceData.deviceName;
 
-        if (hasProfile && hasDevice) {
-          setIsLocked(false);
-        } else {
-          setIsLocked(true);
-        }
+        setIsLocked(!(hasProfile && hasDevice));
 
-        // 기기 데이터가 없는 경우의 처리
         if (!hasDevice) {
             setDevices([]);
             setScore(0);
@@ -139,7 +130,6 @@ const SettingsPage = () => {
             return; 
         }
 
-        // 기기가 있는 경우의 처리
         const currentScore = Number(currentStatus.spaceScore || 0);
         setScore(currentScore);
         setStatusText(getStatusLevel(currentScore));
@@ -164,8 +154,7 @@ const SettingsPage = () => {
   const toggleDeviceStatus = async (currentStatus) => {
     const newStatus = currentStatus === '연결됨' ? '연결안됨' : '연결됨';
     try {
-      // 2. Vite 환경변수 적용 (PUT - 기기 상태)
-      const res = await axios.put(`${import.meta.env.VITE_API_URL}/settings/devices`, {
+      const res = await axios.put(`${API_BASE}/settings/devices`, {
         userName: initialUserName,
         deviceName: devices[0]?.name || '내 기기',
         deviceStatus: newStatus
@@ -206,8 +195,7 @@ const SettingsPage = () => {
         userName: profile.userName
       };
       
-      // 3. Vite 환경변수 적용 (PUT - 알림 설정)
-      await axios.put(`${import.meta.env.VITE_API_URL}/settings/alerts`, payload);
+      await axios.put(`${API_BASE}/settings/alerts`, payload);
       alert('설정이 저장되었습니다.');
       fetchData();
     } catch (err) {
@@ -218,8 +206,7 @@ const SettingsPage = () => {
 
   const deleteDevice = async (deviceId) => {
     try {
-      // 4. Vite 환경변수 적용 (DELETE - 기기 삭제)
-      const res = await axios.delete(`${import.meta.env.VITE_API_URL}/settings/devices`, {
+      const res = await axios.delete(`${API_BASE}/settings/devices`, {
         data: { userName: initialUserName }
       });
       
@@ -252,8 +239,7 @@ const SettingsPage = () => {
 
   const saveProfile = async () => {
     try {
-      // 5. Vite 환경변수 적용 (PUT - 프로필 저장)
-      const res = await axios.put(`${import.meta.env.VITE_API_URL}/settings/profile`, {
+      const res = await axios.put(`${API_BASE}/settings/profile`, {
         userName: profile.userName,
         userEmail: profile.userEmail,
         userSpace: profile.userSpace
