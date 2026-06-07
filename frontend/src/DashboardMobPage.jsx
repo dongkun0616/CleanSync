@@ -127,8 +127,8 @@ const DashboardMobPage = () => {
     <div style={{ width: '100vw', minHeight: '100vh', backgroundColor: '#FFFFFF', paddingBottom: '20px', fontFamily: "'Pretendard', sans-serif", position: 'relative', overflowX: 'hidden' }}>
       <style>{`
         @import url('https://webfontworld.github.io/pretendard/Pretendard.css');
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght=400;500&display=swap');
-        * { font-family: 'Pretendard', sans-serif; box-sizing: border-box; }
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+        * { font-family: 'Pretendard', sans-serif !important; box-sizing: border-box; }
       `}</style>
 
       {isMenuOpen && <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000 }} onClick={() => setIsMenuOpen(false)} />}
