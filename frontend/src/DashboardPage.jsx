@@ -83,7 +83,6 @@ const GlassMiniCard = ({ icon, label, value, unit, color }) => (
     display: 'flex', alignItems: 'center', gap: '14px',
   }}>
     <div style={{ width: '42px', height: '42px', borderRadius: '10px', backgroundColor: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
-      {/* 여기서 크기를 32px로 통일했습니다 */}
       <img src={icon} alt={label} style={{ width: '32px', height: '32px', objectFit: 'contain', display: 'block' }} />
     </div>
     <div>
@@ -132,7 +131,6 @@ const DashboardPage = () => {
       try {
         const initialUserName = 'dongdong'; 
         
-        // 1. Vite 환경변수(import.meta.env.VITE_API_URL) 적용하여 프로필 요청
         const settingsRes = await fetch(`${import.meta.env.VITE_API_URL}/settings/profile?userName=${initialUserName}`, { signal: controller.signal });
         const settingsResult = await settingsRes.json();
         
@@ -141,17 +139,14 @@ const DashboardPage = () => {
           userSpace = settingsResult.data.userSpace;
         }
 
-        // 2. Vite 환경변수 적용하여 디바이스 상태 요청
         const deviceRes = await fetch(`${import.meta.env.VITE_API_URL}/settings/devices?userName=${initialUserName}`, { signal: controller.signal });
         const deviceResult = await deviceRes.json();
         
-        // 기기가 '연결됨' 상태인지 확인
         if (deviceResult?.data?.deviceStatus !== '연결됨') {
           setIsConnected(false);
           return;
         }
 
-        // 3. Vite 환경변수 적용하여 대시보드 데이터 요청
         const response = await fetch(`${import.meta.env.VITE_API_URL}/dashboard?location=${encodeURIComponent(userSpace)}`, { signal: controller.signal });
         const result = await response.json();
         
@@ -243,7 +238,11 @@ const DashboardPage = () => {
 
   return (
     <div style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', display: 'flex', fontFamily: "'Pretendard', sans-serif", boxSizing: 'border-box' }}>
-      <style>{`@import url('https://webfontworld.github.io/pretendard/Pretendard.css'); @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap'); * { font-family: 'Pretendard', sans-serif; }`}</style>
+      <style>{`
+        @import url('https://webfontworld.github.io/pretendard/Pretendard.css');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+        * { font-family: 'Pretendard', sans-serif; }
+      `}</style>
       <aside style={{ width: '230px', minWidth: '230px', height: '100%', background: 'linear-gradient(180deg, #0F1623 0%, #161C2D 100%)', color: '#FFF', padding: '28px 20px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `linear-gradient(135deg, ${theme.color}, ${theme.color}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', boxShadow: `0 4px 12px ${theme.color}44` }}>⚡</div>
@@ -299,8 +298,8 @@ const DashboardPage = () => {
                </div>
                {activeTab === 'dust' && (
                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px', gap: '6px' }}>
-                   <button onClick={() => setDustMode('pm10')} style={{ padding: '4px 12px', borderRadius: '20px', border: dustMode === 'pm10' ? `1px solid ${theme.color}` : '1px solid rgba(0,0,0,0.1)', backgroundColor: dustMode === 'pm10' ? '#FFFFFF' : 'transparent', color: dustMode === 'pm10' ? theme.color : '#64748B', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>● 미세먼지 (PM10)</button>
-                   <button onClick={() => setDustMode('pm25')} style={{ padding: '4px 12px', borderRadius: '20px', border: dustMode === 'pm25' ? '1px solid #EC4899' : '1px solid rgba(0,0,0,0.1)', backgroundColor: dustMode === 'pm25' ? '#FFFFFF' : 'transparent', color: dustMode === 'pm25' ? '#EC4899' : '#64748B', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>● 초미세먼지 (PM2.5)</button>
+                    <button onClick={() => setDustMode('pm10')} style={{ padding: '4px 12px', borderRadius: '20px', border: dustMode === 'pm10' ? `1px solid ${theme.color}` : '1px solid rgba(0,0,0,0.1)', backgroundColor: dustMode === 'pm10' ? '#FFFFFF' : 'transparent', color: dustMode === 'pm10' ? theme.color : '#64748B', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>● 미세먼지 (PM10)</button>
+                    <button onClick={() => setDustMode('pm25')} style={{ padding: '4px 12px', borderRadius: '20px', border: dustMode === 'pm25' ? '1px solid #EC4899' : '1px solid rgba(0,0,0,0.1)', backgroundColor: dustMode === 'pm25' ? '#FFFFFF' : 'transparent', color: dustMode === 'pm25' ? '#EC4899' : '#64748B', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>● 초미세먼지 (PM2.5)</button>
                  </div>
                )}
                 <div style={{ height: '240px', width: '100%' }}>
