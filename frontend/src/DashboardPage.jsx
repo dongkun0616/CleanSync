@@ -250,7 +250,7 @@ const DashboardPage = () => {
         </div>
         <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '18px', marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}><span style={{ fontSize: '12px', color: '#6B7A99', fontWeight: '600' }}>학습 지수</span><span style={{ fontSize: '11px', color: isConnected ? '#10B981' : '#94A3B8', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isConnected ? '#10B981' : '#94A3B8', display: 'inline-block' }} />{isConnected ? 'LIVE' : 'OFFLINE'}</span></div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}><span style={{ fontSize: '48px', fontWeight: '800', color: theme.color, lineHeight: 1, fontFamily: "'DM Mono', monospace", transition: 'all 0.5s ease' }}>{isConnected ? sensorData.score : '--'}</span><span style={{ fontSize: '14px', color: '#4A5568' }}>/ 100</span></div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}><span style={{ fontSize: '48px', fontWeight: '800', color: theme.color, lineHeight: 1, transition: 'all 0.5s ease' }}>{isConnected ? sensorData.score : '--'}</span><span style={{ fontSize: '14px', color: '#4A5568' }}>/ 100</span></div>
           <div style={{ fontSize: '14px', color: theme.color, fontWeight: '700', marginTop: '8px' }}>{isConnected ? sensorData.statusLevel : '기기 연결 끊김'}</div>
         </div>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>

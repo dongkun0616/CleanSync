@@ -8,7 +8,7 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
-// 배경 입자 이펙트 추가 (홈화면과 동일하게!)
+// ── 1. 배경 입자 이펙트 (홈 화면과 동일) ──────────────────────────
 const ParticleBg = ({ color }) => {
   const canvasRef = useRef(null);
   useEffect(() => {
@@ -18,16 +18,27 @@ const ParticleBg = ({ color }) => {
     let raf;
     const resize = () => { canvas.width = canvas.parentElement.offsetWidth; canvas.height = canvas.parentElement.offsetHeight; };
     window.addEventListener('resize', resize); resize();
+    
     const NUM = 50;
-    const particles = Array.from({ length: NUM }, () => ({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, r: Math.random() * 3 + 1, dx: (Math.random() - 0.5) * 0.5, dy: (Math.random() - 0.5) * 0.5, alpha: Math.random() * 0.5 + 0.1 }));
+    const particles = Array.from({ length: NUM }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 3 + 1,
+      dx: (Math.random() - 0.5) * 0.5,
+      dy: (Math.random() - 0.5) * 0.5,
+      alpha: Math.random() * 0.5 + 0.1
+    }));
+
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       particles.forEach((p) => {
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.beginPath(); 
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         const hexColor = color.replace('#', '');
         ctx.fillStyle = '#' + hexColor + Math.floor(p.alpha * 255).toString(16).padStart(2, '0');
         ctx.fill();
-        p.x += p.dx; p.y += p.dy;
+        p.x += p.dx;
+        p.y += p.dy;
         if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
         if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
       });
@@ -45,6 +56,7 @@ const METRIC_CONFIG = [
   { id: 'noise', label: '소음', color: '#8B5CF6', axis: 'y2' }, { id: 'pm10', label: '미세먼지', color: '#64748B', axis: 'y2' }
 ];
 
+// ── 2. 메인 AnalyticsPage 컴포넌트 ──────────────────────────
 const AnalyticsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -62,7 +74,6 @@ const AnalyticsPage = () => {
     if (score >= 60) return "보통"; if (score >= 40) return "나쁨"; return "매우 나쁨";
   };
   
-
   useEffect(() => {
     const handleWheel = (e) => { if (e.ctrlKey || e.metaKey) e.preventDefault(); };
     const handleKeyDown = (e) => { if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '0')) e.preventDefault(); };
@@ -74,14 +85,11 @@ const AnalyticsPage = () => {
     const fetchData = async () => {
       try {
         const initialUserName = 'dongdong';
-        
-        // 1. 프로필 정보와 기기 연결 상태 주소를 Vite 환경변수(import.meta.env.VITE_API_URL)로 교체 완료
         const [profileRes, deviceRes] = await Promise.all([
           axios.get(`${import.meta.env.VITE_API_URL}/settings/profile?userName=${initialUserName}`),
           axios.get(`${import.meta.env.VITE_API_URL}/settings/devices?userName=${initialUserName}`)
         ]);
         
-        // 기기 연결이 끊겨있으면 여기서 바로 차단!
         if (deviceRes.data?.data?.deviceStatus !== '연결됨') {
           setIsConnected(false);
           return;
@@ -93,7 +101,6 @@ const AnalyticsPage = () => {
         const rangeMap = { '1시간': '1h', '6시간': '6h', '12시간': '12h', '24시간': '24h' };
         const range = rangeMap[timeFilter] || '6h';
         
-        // 2. 통계 데이터 요청 주소도 Vite 환경변수(import.meta.env.VITE_API_URL)로 교체 완료
         const url = `${import.meta.env.VITE_API_URL}/analytics?range=${range}&location=${encodeURIComponent(userSpace)}`;
         const res = await axios.get(url);
         
@@ -149,7 +156,6 @@ const AnalyticsPage = () => {
   };
 
   const labels = apiData?.labels?.length > 0 ? apiData.labels : generateLabels(timeFilter);
-  
   const datasets = METRIC_CONFIG.filter(metric => activeMetrics.includes(metric.id)).map(metric => ({
     id: metric.id, label: metric.label, data: apiData?.metrics?.[metric.id] || [], 
     borderColor: metric.color, backgroundColor: 'transparent', yAxisID: metric.axis, tension: 0.3, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 6,
@@ -174,11 +180,12 @@ const AnalyticsPage = () => {
   const getTheme = (score, isConnected) => {
     if (!isConnected) return { color: '#94A3B8', bg: 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)' };
     if (score >= 90) return { color: "#059669", bg: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)' };
-    if (score >= 75) return { color: "#10B981", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
+    if (score >= 75) return { color: "#10B981", bg: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)' };
     if (score >= 60) return { color: "#F59E0B", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
     if (score >= 40) return { color: "#EF4444", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
     return { color: "#B91C1C", bg: 'linear-gradient(135deg, #FEE2E2 0%, #FFF5F5 100%)' };
-  };  const theme = getTheme(sensorData.score, isConnected);
+  }; 
+  const theme = getTheme(sensorData.score, isConnected);
   
   const formatTime = (d) => d ? `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}` : '--:--:--';
   const glassCardStyle = { backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.7)', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' };
@@ -186,7 +193,13 @@ const AnalyticsPage = () => {
 
   return (
     <div style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', display: 'flex', boxSizing: 'border-box' }}>
-      <style>{`@import url('https://webfontworld.github.io/pretendard/Pretendard.css'); @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&display=swap'); * { font-family: 'Pretendard', sans-serif; box-sizing: border-box; }`}</style>
+      <style>{`
+        @import url('https://webfontworld.github.io/pretendard/Pretendard.css');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&display=swap');
+        * { font-family: 'Pretendard', sans-serif !important; box-sizing: border-box; }
+      `}</style>
+      
+      {/* 사이드바 */}
       <aside style={{ width: '230px', minWidth: '230px', height: '100%', background: 'linear-gradient(180deg, #0F1623 0%, #161C2D 100%)', color: '#FFF', padding: '28px 20px', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `linear-gradient(135deg, ${theme.color}, ${theme.color}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', boxShadow: `0 4px 12px ${theme.color}44` }}>⚡</div>
@@ -194,7 +207,7 @@ const AnalyticsPage = () => {
         </div>
         <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '18px', marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}><span style={{ fontSize: '12px', color: '#6B7A99', fontWeight: '600' }}>학습 지수</span><span style={{ fontSize: '11px', color: isConnected ? '#10B981' : '#94A3B8', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isConnected ? '#10B981' : '#94A3B8', display: 'inline-block' }} />{isConnected ? 'LIVE' : 'OFFLINE'}</span></div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}><span style={{ fontSize: '48px', fontWeight: '800', color: theme.color, lineHeight: 1, fontFamily: "'DM Mono', monospace", transition: 'all 0.5s ease' }}>{isConnected ? sensorData.score : '--'}</span><span style={{ fontSize: '14px', color: '#4A5568'}}>/ 100</span></div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}><span style={{ fontSize: '48px', fontWeight: '800', color: theme.color, lineHeight: 1, transition: 'all 0.5s ease' }}>{isConnected ? sensorData.score : '--'}</span><span style={{ fontSize: '14px', color: '#4A5568'}}>/ 100</span></div>
           <div style={{ fontSize: '14px', color: theme.color, fontWeight: '700', marginTop: '8px' }}>{isConnected ? sensorData.statusText : '기기 연결 끊김'}</div>
         </div>
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
@@ -210,10 +223,10 @@ const AnalyticsPage = () => {
         <div style={{ fontSize: '10px', color: '#3D4F6E', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>마지막 업데이트 {formatTime(lastUpdate)}</div>
       </aside>
 
+      {/* 메인 영역 */}
       <main style={{ flex: 1, position: 'relative', overflowY: 'auto', background: theme.bg, transition: 'background 0.8s ease', display: 'flex', flexDirection: 'column', padding: '40px 48px' }}>
         <ParticleBg color={theme.color} />
         
-        {/* 기기 연결 끊김 시 홈 화면과 동일한 디자인 적용 */}
         {!isConnected ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
             <h2 style={{ fontSize: '32px', color: '#475569', marginBottom: '16px', fontWeight: '800' }}>현재 기기가 연결되어 있지 않습니다.</h2>
@@ -257,35 +270,30 @@ const AnalyticsPage = () => {
               <section style={{ flex: '3', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ fontSize: '18px', fontWeight: '800', color: '#1A202C', paddingLeft: '4px' }}>⭐ 인사이트</div>
                 <div style={{ ...glassCardStyle, padding: '24px', overflowY: 'auto' }}>
-                  
                   <div style={{ backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: '#10B981', marginBottom: '6px' }}>✨ {bestFocusInsight?.title || '최고 집중 시간대'}</div>
                     <div style={{ fontSize: '18px', fontWeight: '800', color: bestFocusInsight?.time ? '#10B981' : '#94A3B8', marginBottom: '4px', letterSpacing: '-0.5px' }}>{bestFocusInsight?.time ? new Date(bestFocusInsight.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '데이터 없음'}</div>
                     {bestFocusInsight?.message && <div style={{ fontSize: '12px', color: '#64748B' }}>{bestFocusInsight.message}</div>}
                   </div>
-                  
                   <div style={{ backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: '#F59E0B', marginBottom: '6px' }}>⚠️ {co2WarningInsight?.title || '최고 CO₂ 시점'}</div>
                     <div style={{ fontSize: '18px', fontWeight: '800', color: co2WarningInsight?.time ? '#F59E0B' : '#94A3B8', marginBottom: '4px', letterSpacing: '-0.5px' }}>{co2WarningInsight?.time ? new Date(co2WarningInsight.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '데이터 없음'}</div>
                     {co2WarningInsight?.message && <div style={{ fontSize: '12px', color: '#64748B' }}>{co2WarningInsight.message}</div>}
                   </div>
-
                   <div style={{ backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: '#6366F1', marginBottom: '6px' }}>✅ {goodRatioInsight?.title || '쾌적 환경 비율'}</div>
                     <div style={{ fontSize: '18px', fontWeight: '800', color: goodRatioInsight ? '#6366F1' : '#94A3B8', marginBottom: '4px', letterSpacing: '-0.5px' }}>{goodRatioInsight ? (goodRatioInsight.value || '0%') : '데이터 없음'}</div>
                     {goodRatioInsight?.message && <div style={{ fontSize: '12px', color: '#64748B' }}>{goodRatioInsight.message}</div>}
                   </div>
-
                   <div style={{ backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '700', color: '#4A5568', marginBottom: '6px' }}>🎯 {avgScoreInsight?.title || '평균 학습 지수'}</div>
                     <div style={{ fontSize: '18px', fontWeight: '800', color: avgScoreInsight ? '#4A5568' : '#94A3B8', marginBottom: '4px', letterSpacing: '-0.5px' }}>{avgScoreInsight ? (avgScoreInsight.value || '0점') : '데이터 없음'}</div>
                     {avgScoreInsight?.message && <div style={{ fontSize: '12px', color: '#64748B' }}>{avgScoreInsight.message}</div>}
                   </div>
-
                   <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px dashed rgba(0,0,0,0.1)' }}>
                     <div style={{ fontSize: '14px', fontWeight: '700', color: '#4A5568', marginBottom: '16px' }}>기간 요약</div>
                     {isDataEmpty ? (
-                       <div style={{ fontSize: '13px', color: '#94A3B8', textAlign: 'center', padding: '10px 0' }}>데이터가 없습니다</div>
+                      <div style={{ fontSize: '13px', color: '#94A3B8', textAlign: 'center', padding: '10px 0' }}>데이터가 없습니다</div>
                     ) : (
                       [{ label: 'CO₂', id: 'co2', color: '#F59E0B', unit: 'ppm' }, { label: '온도', id: 'temp', color: '#EF4444', unit: '°C' }, { label: '습도', id: 'humi', color: '#3B82F6', unit: '%' }, { label: '소음', id: 'noise', color: '#8B5CF6', unit: 'dB' }, { label: '미세먼지', id: 'pm10', color: '#64748B', unit: 'µg' }].map((item, idx) => {
                         const backendKey = summaryKeyMap[item.id]; const backendAvg = apiData?.summary?.[backendKey]?.avg ?? '0.0';

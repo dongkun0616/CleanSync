@@ -348,7 +348,7 @@ const HomePage = () => {
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-            <span style={{ fontSize: '48px', fontWeight: '800', color: theme.color, lineHeight: 1, fontFamily: "'DM Mono', monospace", transition: 'all 0.5s ease' }}>
+            <span style={{ fontSize: '48px', fontWeight: '800', color: theme.color, lineHeight: 1, transition: 'all 0.5s ease' }}>
               {isDeviceConnected ? sensorData.score : '--'}
             </span>
             <span style={{ fontSize: '14px', color: '#4A5568' }}>/ 100</span>
