@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import * as Utils from './SettingsUtils';
 import { AlarmTab, DeviceTab, ProfileTab } from './components/Tabs';
 import './SettingsPage.css';
@@ -43,24 +44,135 @@ const ParticleBg = ({ color }) => {
 const SettingsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [score] = useState(45);
+  
+  const getStatusLevel = (score) => {
+    if (score >= 90) return "매우 쾌적";
+    if (score >= 75) return "쾌적";
+    if (score >= 60) return "보통";
+    if (score >= 40) return "나쁨";
+    return "매우 나쁨";
+  };
+  
+  const [score, setScore] = useState(0);
+  const [statusText, setStatusText] = useState('데이터 로딩 중...');
+  
   const theme = Utils.getTheme(score);
-  const statusText = Utils.getStatusText(score);
 
   const [activeTab, setActiveTab] = useState('alarm');
   const [settings, setSettings] = useState({ emailAlert: true, pushAlert: false, dailyReport: true, weeklyReport: false, co2: 1000, noise: 55, temp: 27, dust: 35 });
   const [devices, setDevices] = useState([{ id: 1, name: '강의실 301호', location: '3층', time: '12:30', status: '연결됨' }]);
   const [showDeviceModal, setShowDeviceModal] = useState(false);
   const [newDevice, setNewDevice] = useState({ name: '', location: '' });
-  const [profile, setProfile] = useState({ name: '홍길동', email: 'user@example.com', space: '연구실' });
+  
+  const [profile, setProfile] = useState({ userName: '', userEmail: '', userSpace: '' });
+  const [isLocked, setIsLocked] = useState(true);
   const [lastUpdate] = useState(new Date());
 
-  const handleSettingChange = (key, val) => setSettings({ ...settings, [key]: val });
-  const saveSettings = () => alert('설정이 저장되었습니다.');
+  useEffect(() => {
+    const fetchData = async () => {
+      // 고정 아이디 설정
+      const initialUserName = 'dongdong'; 
+      try {
+        const res = await axios.get(`http://localhost:3000/settings?userName=${initialUserName}`);
+        if (res.data && res.data.success) {
+          const { currentStatus, alerts, devices: deviceData, profile: profileData } = res.data.data;
+          
+          const currentScore = Number(currentStatus.spaceScore || 0);
+          setScore(currentScore);
+          setStatusText(getStatusLevel(currentScore));
+          
+          setSettings({
+            emailAlert: alerts.emailAlertEnabled,
+            pushAlert: alerts.pushAlertEnabled,
+            dailyReport: alerts.dailyReportEnabled,
+            weeklyReport: alerts.weeklyReportEnabled,
+            co2: alerts.co2Threshold,
+            noise: alerts.noiseThreshold,
+            temp: alerts.temperatureThreshold,
+            dust: alerts.dustThreshold
+          });
+          
+          setProfile({
+            userName: profileData.userName || initialUserName,
+            userEmail: profileData.userEmail || '',
+            userSpace: profileData.userSpace || ''
+          });
+
+          if (deviceData) setDevices([deviceData]);
+
+          if (profileData.userName) {
+            setIsLocked(false);
+          }
+        }
+      } catch (err) {
+        console.error("데이터를 가져오는 중 에러 발생", err);
+      }
+    };
+    fetchData();
+  }, []);
+
+  const handleSettingChange = (key, val) => {
+    if (isLocked) {
+      alert("프로필 정보를 먼저 저장해야 알림 설정을 변경할 수 있습니다.");
+      return;
+    }
+    setSettings({ ...settings, [key]: val });
+  };
+
+  const saveSettings = async () => {
+    if (isLocked) {
+      alert("프로필 정보를 먼저 저장해야 알림 설정을 변경할 수 있습니다.");
+      return;
+    }
+    try {
+      const payload = {
+        emailAlertEnabled: settings.emailAlert,
+        pushAlertEnabled: settings.pushAlert,
+        dailyReportEnabled: settings.dailyReport,
+        weeklyReportEnabled: settings.weeklyReport,
+        co2Threshold: settings.co2,
+        noiseThreshold: settings.noise,
+        temperatureThreshold: settings.temp,
+        dustThreshold: settings.dust,
+        userName: profile.userName
+      };
+      
+      await axios.put('http://localhost:3000/settings/alerts', payload);
+      alert('설정이 저장되었습니다.');
+    } catch (err) {
+      console.error("설정 저장 에러", err);
+      alert('설정 저장에 실패했습니다.');
+    }
+  };
+
   const deleteDevice = (id) => setDevices(devices.filter(d => d.id !== id));
   const addDevice = () => { setDevices([...devices, { ...newDevice, id: Date.now(), time: '방금', status: '연결됨' }]); setShowDeviceModal(false); };
-  const handleProfileChange = (key, val) => setProfile({ ...profile, [key]: val });
-  const saveProfile = () => alert('프로필이 저장되었습니다.');
+  
+  // 수정: userName 변경 시도 시 아무 동작도 하지 않음 (고정)
+  const handleProfileChange = (key, val) => {
+    if (key === 'userName') return; 
+    setProfile(prev => ({ ...prev, [key]: val }));
+  };
+  
+  const saveProfile = async () => {
+    try {
+      const res = await axios.put('http://localhost:3000/settings/profile', {
+        userName: profile.userName,
+        userEmail: profile.userEmail,
+        userSpace: profile.userSpace
+      });
+
+      if (res.data.success) {
+        setIsLocked(false);
+        alert('프로필이 성공적으로 저장되었습니다.');
+      } else {
+        alert('저장에 실패했습니다.');
+      }
+    } catch (err) {
+      console.error("프로필 저장 중 에러 발생", err);
+      alert('서버와 통신하는 중 오류가 발생했습니다.');
+    }
+  };
   
   const formatTime = (d) => d
     ? `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`
@@ -96,42 +208,42 @@ const SettingsPage = () => {
           <div style={{ fontSize: '14px', fontWeight: '700', color: theme.color, marginTop: '8px' }}>{statusText}</div>
         </div>
 
-       <nav style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}> {/* gap을 조절하여 간격을 넓혔습니다 */}
-  {[
-    { label: '홈', sub: '현재 상태', path: '/' },
-    { label: '대시보드', sub: '실시간 센서', path: '/dashboard' },
-    { label: '통계', sub: '기록 분석', path: '/analytics' },
-    { label: '설정', sub: '환경 설정', path: '/settings' },
-  ].map(({ label, sub, path }) => {
-    const isActive = location.pathname === path;
-    return (
-      <div 
-        key={label} 
-        onClick={() => navigate(path)} 
-        style={{ 
-          display: 'flex', 
-          flexDirection: 'column', // 세로 정렬로 변경
-          alignItems: 'center',    // 가로축 가운데 정렬
-          justifyContent: 'center',
-          padding: '12px 14px', 
-          borderRadius: '10px', 
-          cursor: 'pointer', 
-          background: isActive ? `linear-gradient(90deg, ${theme.color}22, transparent)` : 'transparent', 
-          borderLeft: isActive ? `3px solid ${theme.color}` : '3px solid transparent', 
-          transition: 'all 0.2s ease',
-          textAlign: 'center'      // 텍스트 가운데 정렬
-        }}
-      >
-        <div style={{ fontSize: '13px', fontWeight: isActive ? '700' : '500', color: isActive ? '#FFF' : '#6B7A99' }}>
-          {label}
-        </div>
-        <div style={{ fontSize: '10px', color: '#4A5568', marginTop: '4px' }}>
-          {sub}
-        </div>
-      </div>
-    );
-  })}
-</nav>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+          {[
+            { label: '홈', sub: '현재 상태', path: '/' },
+            { label: '대시보드', sub: '실시간 센서', path: '/dashboard' },
+            { label: '통계', sub: '기록 분석', path: '/analytics' },
+            { label: '설정', sub: '환경 설정', path: '/settings' },
+          ].map(({ label, sub, path }) => {
+            const isActive = location.pathname === path;
+            return (
+              <div 
+                key={label} 
+                onClick={() => navigate(path)} 
+                style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center',   
+                  justifyContent: 'center',
+                  padding: '12px 14px', 
+                  borderRadius: '10px', 
+                  cursor: 'pointer', 
+                  background: isActive ? `linear-gradient(90deg, ${theme.color}22, transparent)` : 'transparent', 
+                  borderLeft: isActive ? `3px solid ${theme.color}` : '3px solid transparent', 
+                  transition: 'all 0.2s ease',
+                  textAlign: 'center'       
+                }}
+              >
+                <div style={{ fontSize: '13px', fontWeight: isActive ? '700' : '500', color: isActive ? '#FFF' : '#6B7A99' }}>
+                  {label}
+                </div>
+                <div style={{ fontSize: '10px', color: '#4A5568', marginTop: '4px' }}>
+                  {sub}
+                </div>
+              </div>
+            );
+          })}
+        </nav>
 
         <div style={{ fontSize: '10px', color: '#3D4F6E', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           마지막 업데이트 {formatTime(lastUpdate)}
@@ -154,11 +266,11 @@ const SettingsPage = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
             {activeTab === 'alarm' && (
               <div style={{ padding: '20px 0', display: 'flex', flexDirection: 'column', gap: '60px' }}>
-                <AlarmTab settings={settings} handleSettingChange={handleSettingChange} saveSettings={saveSettings} />
+                <AlarmTab settings={settings} handleSettingChange={handleSettingChange} saveSettings={saveSettings} isLocked={isLocked}/>
               </div>
             )}
             {activeTab === 'device' && <DeviceTab devices={devices} deleteDevice={deleteDevice} showDeviceModal={showDeviceModal} setShowDeviceModal={setShowDeviceModal} newDevice={newDevice} setNewDevice={setNewDevice} addDevice={addDevice} />}
-            {activeTab === 'profile' && <ProfileTab profile={profile} handleProfileChange={handleProfileChange} saveProfile={saveProfile} />}
+            {activeTab === 'profile' && <ProfileTab profile={profile} handleProfileChange={handleProfileChange} saveProfile={saveProfile} isLocked={isLocked} />}
           </div>
         </div>
       </main>

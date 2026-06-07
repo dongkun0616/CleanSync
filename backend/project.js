@@ -169,7 +169,6 @@ app.get("/analytics", (req, res) => {
 
   const hours = rangeMap[range] || 6;
 
-  // 수정: NOW() 대신 DB 내 가장 최근 데이터의 시간을 기준으로 조회하도록 변경
   const sql = `
     SELECT
       id,
@@ -297,87 +296,67 @@ app.get("/analytics", (req, res) => {
   });
 });
 
-// ================== 설정 전체 조회 API ==================
+// ================== 설정 전체 조회 API 수정 ==================
 app.get("/settings", (req, res) => {
-  const sql = `
-    SELECT *
-    FROM app_settings
-    LIMIT 1
-  `;
+  const { userName } = req.query; // 사용자 이름으로 특정 데이터 조회
+  const settingsSql = `SELECT * FROM app_settings WHERE USER_NAME = ?`;
+  const statusSql = `SELECT SPACE_SCORE FROM home_status ORDER BY CREATE_AT DESC LIMIT 1`;
 
-  getPool().query(sql, (err, results) => {
-    if (err) {
-      console.error("설정 전체 조회 실패:", err);
-      saveLog(`설정 전체 조회 실패: ${err.message}`);
-      return res.status(500).json({ success: false, message: "설정 전체 조회 실패" });
+  getPool().query(settingsSql, [userName], (err, settingsResults) => {
+    if (err || settingsResults.length === 0) {
+      return res.status(500).json({ success: false, message: "설정 조회 실패 또는 존재하지 않는 유저" });
     }
 
-    if (!results || results.length === 0) {
-      return res.json({ success: false, message: "설정 데이터가 없습니다." });
-    }
+    getPool().query(statusSql, (statusErr, statusResults) => {
+      const settingsData = settingsResults[0];
+      const spaceScore = (statusResults && statusResults.length > 0) ? Number(statusResults[0].SPACE_SCORE) : 0;
 
-    const data = results[0];
-
-    res.json({
-      success: true,
-      data: {
-        menus: [
-          { key: "alerts", name: "알림 설정", endpoint: "/settings/alerts" },
-          { key: "devices", name: "기기 관리", endpoint: "/settings/devices" },
-          { key: "profile", name: "프로필 수정", endpoint: "/settings/profile" }
-        ],
-        alerts: {
-          emailAlertEnabled: Boolean(data.EMAIL_ALERT),
-          pushAlertEnabled: Boolean(data.PUSH_ALERT),
-          dailyReportEnabled: Boolean(data.DAILY_REPORT),
-          weeklyReportEnabled: Boolean(data.WEEKLY_REPORT),
-          co2Threshold: Number(data.CO2_THRESHOLD || 0),
-          noiseThreshold: Number(data.NOS_THRESHOLD || data.alert_noise_threshold || 0),
-          temperatureThreshold: Number(data.TEMP_THRESHOLD || 0),
-          dustThreshold: Number(data.DUST_THRESHOLD || data.alert_dust_threshold || 0)
-        },
-        devices: {
-          deviceName: data.DEVICE_NAME || null,
-          deviceStatus: data.DEVICE_STATUS || null,
-          lastConnected: data.LAST_CONNECTED || null
-        },
-        profile: {
-          userName: data.USER_NAME || null,
-          userEmail: data.USER_EMAIL || null,
-          userSpace: data.USER_SPACE || null
-        },
-        themeMode: data.theme_mode || "Light",
-        serviceInfo: data.service_info || "Clean-Sync",
-        updatedAt: data.updated_at
-      }
+      res.json({
+        success: true,
+        data: {
+          currentStatus: { spaceScore: spaceScore },
+          menus: [
+            { key: "alerts", name: "알림 설정", endpoint: "/settings/alerts" },
+            { key: "devices", name: "기기 관리", endpoint: "/settings/devices" },
+            { key: "profile", name: "프로필 수정", endpoint: "/settings/profile" }
+          ],
+          alerts: {
+            emailAlertEnabled: Boolean(settingsData.EMAIL_ALERT),
+            pushAlertEnabled: Boolean(settingsData.PUSH_ALERT),
+            dailyReportEnabled: Boolean(settingsData.DAILY_REPORT),
+            weeklyReportEnabled: Boolean(settingsData.WEEKLY_REPORT),
+            co2Threshold: Number(settingsData.CO2_THRESHOLD || 0),
+            noiseThreshold: Number(settingsData.NOS_THRESHOLD || settingsData.alert_noise_threshold || 0),
+            temperatureThreshold: Number(settingsData.TEMP_THRESHOLD || 0),
+            dustThreshold: Number(settingsData.DUST_THRESHOLD || settingsData.alert_dust_threshold || 0)
+          },
+          devices: {
+            deviceName: settingsData.DEVICE_NAME || null,
+            deviceStatus: settingsData.DEVICE_STATUS || null,
+            lastConnected: settingsData.LAST_CONNECTED || null
+          },
+          profile: {
+            userName: settingsData.USER_NAME || null,
+            userEmail: settingsData.USER_EMAIL || null,
+            userSpace: settingsData.USER_SPACE || null
+          },
+          themeMode: settingsData.theme_mode || "Light",
+          serviceInfo: settingsData.service_info || "Clean-Sync",
+          updatedAt: settingsData.updated_at
+        }
+      });
     });
   });
 });
 
 // ================== 알림 설정 조회 API ==================
 app.get("/settings/alerts", (req, res) => {
+  const { userName } = req.query;
   const sql = `
-    SELECT
-      EMAIL_ALERT,
-      PUSH_ALERT,
-      DAILY_REPORT,
-      WEEKLY_REPORT,
-      CO2_THRESHOLD,
-      NOS_THRESHOLD,
-      TEMP_THRESHOLD,
-      DUST_THRESHOLD,
-      alert_dust_threshold,
-      alert_noise_threshold,
-      dust_alert_enabled,
-      noise_alert_enabled,
-      theme_mode,
-      service_info,
-      updated_at
-    FROM app_settings
-    LIMIT 1
+    SELECT * FROM app_settings WHERE USER_NAME = ?
   `;
 
-  getPool().query(sql, (err, results) => {
+  getPool().query(sql, [userName], (err, results) => {
     if (err) {
       console.error("알림 설정 조회 실패:", err);
       saveLog(`알림 설정 조회 실패: ${err.message}`);
@@ -414,6 +393,7 @@ app.get("/settings/alerts", (req, res) => {
 // ================== 알림 설정 저장 API ==================
 app.put("/settings/alerts", (req, res) => {
   const {
+    userName, // 수정된 부분: 유저 식별자 추가
     emailAlertEnabled,
     pushAlertEnabled,
     dailyReportEnabled,
@@ -443,7 +423,7 @@ app.put("/settings/alerts", (req, res) => {
       dust_alert_enabled = ?,
       noise_alert_enabled = ?,
       theme_mode = ?
-    LIMIT 1
+    WHERE USER_NAME = ?
   `;
 
   const values = [
@@ -459,7 +439,8 @@ app.put("/settings/alerts", (req, res) => {
     Number(noiseThreshold),
     dustAlertEnabled === undefined ? 1 : dustAlertEnabled ? 1 : 0,
     noiseAlertEnabled === undefined ? 1 : noiseAlertEnabled ? 1 : 0,
-    themeMode || "Light"
+    themeMode || "Light",
+    userName
   ];
 
   getPool().query(sql, values, (err) => {
@@ -473,18 +454,43 @@ app.put("/settings/alerts", (req, res) => {
   });
 });
 
-// ================== 기기 관리 조회 API ==================
-app.get("/settings/devices", (req, res) => {
+// ================== 웹 푸시 구독 정보 저장 API ==================
+app.post("/settings/subscription", (req, res) => {
+  const { userName, subscription } = req.body;
+
+  if (!userName || !subscription) {
+    return res.status(400).json({ success: false, message: "필수 정보가 누락되었습니다." });
+  }
+
   const sql = `
-    SELECT
-      DEVICE_NAME,
-      DEVICE_STATUS,
-      LAST_CONNECTED
-    FROM app_settings
-    LIMIT 1
+    UPDATE app_settings
+    SET PUSH_SUBSCRIPTION = ?
+    WHERE USER_NAME = ?
   `;
 
-  getPool().query(sql, (err, results) => {
+  // subscription 객체를 JSON 문자열로 변환하여 저장
+  const values = [JSON.stringify(subscription), userName];
+
+  getPool().query(sql, values, (err) => {
+    if (err) {
+      console.error("푸시 구독 저장 실패:", err);
+      return res.status(500).json({ success: false, message: "푸시 구독 저장 실패" });
+    }
+
+    res.json({ success: true, message: "푸시 구독 정보가 저장되었습니다." });
+  });
+});
+
+// ================== 기기 관리 조회 API ==================
+app.get("/settings/devices", (req, res) => {
+  const { userName } = req.query;
+  const sql = `
+    SELECT DEVICE_NAME, DEVICE_STATUS, LAST_CONNECTED
+    FROM app_settings
+    WHERE USER_NAME = ?
+  `;
+
+  getPool().query(sql, [userName], (err, results) => {
     if (err) {
       console.error("기기 관리 조회 실패:", err);
       saveLog(`기기 관리 조회 실패: ${err.message}`);
@@ -510,7 +516,7 @@ app.get("/settings/devices", (req, res) => {
 
 // ================== 기기 관리 저장 API ==================
 app.put("/settings/devices", (req, res) => {
-  const { deviceName, deviceStatus } = req.body;
+  const { userName, deviceName, deviceStatus } = req.body;
 
   const sql = `
     UPDATE app_settings
@@ -518,10 +524,10 @@ app.put("/settings/devices", (req, res) => {
       DEVICE_NAME = ?,
       DEVICE_STATUS = ?,
       LAST_CONNECTED = NOW()
-    LIMIT 1
+    WHERE USER_NAME = ?
   `;
 
-  const values = [deviceName, deviceStatus];
+  const values = [deviceName, deviceStatus, userName];
 
   getPool().query(sql, values, (err) => {
     if (err) {
@@ -536,16 +542,14 @@ app.put("/settings/devices", (req, res) => {
 
 // ================== 프로필 조회 API ==================
 app.get("/settings/profile", (req, res) => {
+  const { userName } = req.query;
   const sql = `
-    SELECT
-      USER_NAME,
-      USER_EMAIL,
-      USER_SPACE
+    SELECT USER_NAME, USER_EMAIL, USER_SPACE
     FROM app_settings
-    LIMIT 1
+    WHERE USER_NAME = ?
   `;
 
-  getPool().query(sql, (err, results) => {
+  getPool().query(sql, [userName], (err, results) => {
     if (err) {
       console.error("프로필 조회 실패:", err);
       saveLog(`프로필 조회 실패: ${err.message}`);
@@ -569,6 +573,35 @@ app.get("/settings/profile", (req, res) => {
   });
 });
 
+// ================== 프로필 생성 API (수정) ==================
+app.post("/settings/profile", (req, res) => {
+  const { userName, userEmail, userSpace } = req.body;
+
+  // 1. 데이터 검증 (중요!)
+  if (!userName) {
+    return res.status(400).json({ success: false, message: "아이디(USER_NAME)는 필수입니다." });
+  }
+
+  // 2. 이미 존재하는지 확인 후 삽입 (INSERT IGNORE 사용)
+  const sql = `
+    INSERT IGNORE INTO app_settings (USER_NAME, USER_EMAIL, USER_SPACE)
+    VALUES (?, ?, ?)
+  `;
+
+  getPool().query(sql, [userName, userEmail, userSpace], (err, result) => {
+    if (err) {
+      console.error("프로필 생성 실패:", err);
+      return res.status(500).json({ success: false, message: "프로필 생성 실패" });
+    }
+    
+    if (result.affectedRows === 0) {
+      return res.status(409).json({ success: false, message: "이미 존재하는 아이디입니다." });
+    }
+
+    res.json({ success: true, message: "프로필이 생성되었습니다." });
+  });
+});
+
 // ================== 프로필 저장 API ==================
 app.put("/settings/profile", (req, res) => {
   const { userName, userEmail, userSpace } = req.body;
@@ -576,13 +609,12 @@ app.put("/settings/profile", (req, res) => {
   const sql = `
     UPDATE app_settings
     SET
-      USER_NAME = ?,
       USER_EMAIL = ?,
       USER_SPACE = ?
-    LIMIT 1
+    WHERE USER_NAME = ?
   `;
 
-  const values = [userName, userEmail, userSpace];
+  const values = [userEmail, userSpace, userName];
 
   getPool().query(sql, values, (err) => {
     if (err) {

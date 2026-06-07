@@ -1,5 +1,7 @@
-export const AlarmTab = ({ settings, handleSettingChange, saveSettings }) => (
-  <section className="settings-section">
+import React from 'react';
+
+export const AlarmTab = ({ settings, handleSettingChange, saveSettings, isLocked = false }) => (
+  <section className="settings-section" style={{ opacity: isLocked ? 0.6 : 1, pointerEvents: isLocked ? 'none' : 'auto' }}>
     <h2>알림 설정</h2>
     <h3 className="left-title">알림 채널</h3>
     <p className="settings-desc">알림을 받을 방법을 선택하세요</p>
@@ -10,7 +12,6 @@ export const AlarmTab = ({ settings, handleSettingChange, saveSettings }) => (
       <div className="setting-row"><div><b>주간 리포트</b><p>매주 월요일 주간 분석 리포트를 받습니다</p></div><label className="switch"><input type="checkbox" checked={settings.weeklyReport} onChange={(e) => handleSettingChange("weeklyReport", e.target.checked)} /><span className="slider"></span></label></div>
     </div>
     
-    {/* 수정된 부분: 임계값 설정 섹션 상단에 여백 추가 */}
     <div style={{ marginTop: '50px' }}>
       <h3 className="left-title">임계값 설정</h3>
       <p className="settings-desc">이 수치를 초과하면 알림이 발송됩니다</p>
@@ -63,9 +64,30 @@ export const ProfileTab = ({ profile, handleProfileChange, saveProfile }) => (
     <h2>프로필 정보</h2>
     <p className="settings-desc">계정 정보를 수정합니다</p>
     <div className="settings-card profile-card">
-      <label>이름<input type="text" value={profile.name} onChange={(e) => handleProfileChange("name", e.target.value)} /></label>
-      <label>이메일<input type="email" value={profile.email} onChange={(e) => handleProfileChange("email", e.target.value)} /></label>
-      <label>주 사용 공간<input type="text" value={profile.space} onChange={(e) => handleProfileChange("space", e.target.value)} /></label>
+      <label>
+        이름
+        <input 
+          type="text" 
+          value={profile.userName || ''} 
+          onChange={(e) => handleProfileChange("userName", e.target.value)} 
+        />
+      </label>
+      <label>
+        이메일
+        <input 
+          type="email" 
+          value={profile.userEmail || ''} 
+          onChange={(e) => handleProfileChange("userEmail", e.target.value)} 
+        />
+      </label>
+      <label>
+        주 사용 공간
+        <input 
+          type="text" 
+          value={profile.userSpace || ''} 
+          onChange={(e) => handleProfileChange("userSpace", e.target.value)} 
+        />
+      </label>
     </div>
     <button className="save-setting-btn" onClick={saveProfile}>프로필 저장</button>
   </section>
