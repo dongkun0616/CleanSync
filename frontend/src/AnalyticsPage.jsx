@@ -71,7 +71,7 @@ const AnalyticsPage = () => {
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = async (a) => {
       try {
         const initialUserName = 'dongdong';
         
@@ -178,7 +178,7 @@ const AnalyticsPage = () => {
     if (score >= 60) return { color: "#F59E0B", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
     if (score >= 40) return { color: "#EF4444", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
     return { color: "#B91C1C", bg: 'linear-gradient(135deg, #FEE2E2 0%, #FFF5F5 100%)' };
-  };  const theme = getTheme(sensorData.score);
+  };  const theme = getTheme(sensorData.score, isConnected);
   
   const formatTime = (d) => d ? `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}` : '--:--:--';
   const glassCardStyle = { backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.7)', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' };

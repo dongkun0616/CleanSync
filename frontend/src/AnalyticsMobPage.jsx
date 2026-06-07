@@ -26,14 +26,16 @@ const AnalyticsMobPage = () => {
   const [activeMetrics, setActiveMetrics] = useState(['score']);
   const [apiData, setApiData] = useState(null);
   
-  // 연결 상태 추가
   const [isConnected, setIsConnected] = useState(true);
   const [sensorData, setSensorData] = useState({ score: 0, statusText: '데이터 로딩중' });
 
-  const getScoreColor = (score) => {
-    if (score >= 80) return '#10B981';
-    if (score >= 60) return '#F59E0B';
-    return '#EF4444';
+  // 1. 상태 정보 로직 통일
+  const getStatusInfo = (score) => {
+    if (score >= 90) return { text: "매우 쾌적", color: "#059669" };
+    if (score >= 75) return { text: "쾌적", color: "#10B981" };
+    if (score >= 60) return { text: "보통", color: "#F59E0B" };
+    if (score >= 40) return { text: "나쁨", color: "#EF4444" };
+    return { text: "매우 나쁨", color: "#B91C1C" };
   };
 
   const navMenus = [
@@ -47,13 +49,12 @@ const AnalyticsMobPage = () => {
     try {
       const initialUserName = 'dongdong';
       
-      // 1. 프로필 정보와 기기 상태 확인
       const [profileRes, deviceRes] = await Promise.all([
         axios.get(`http://localhost:5000/settings/profile?userName=${initialUserName}`),
         axios.get(`http://localhost:5000/settings/devices?userName=${initialUserName}`)
       ]);
 
-      // 🚨 연결이 끊겨있으면 중지
+      // 2. 기기 연결 상태 판별
       if (deviceRes.data?.data?.deviceStatus !== '연결됨') {
         setIsConnected(false);
         return;
@@ -63,7 +64,6 @@ const AnalyticsMobPage = () => {
       let userSpace = profileRes.data?.data?.userSpace || '동아리방';
       const rangeCode = range.replace('시간', 'h');
       
-      // 2. 포트 5000 및 공간 파라미터 적용
       const response = await axios.get(`http://localhost:5000/analytics?range=${rangeCode}&location=${encodeURIComponent(userSpace)}`);
       
       if (response.data && response.data.success) {
@@ -72,9 +72,11 @@ const AnalyticsMobPage = () => {
         
         if (data.chart && data.chart.length > 0) {
           const latest = data.chart[data.chart.length - 1];
+          const scoreVal = Math.round(latest.spaceScore);
+          // 통일된 텍스트 적용
           setSensorData({ 
-            score: Math.round(latest.spaceScore), 
-            statusText: latest.spaceScore >= 80 ? '쾌적' : latest.spaceScore >= 60 ? '보통' : '혼잡' 
+            score: scoreVal, 
+            statusText: getStatusInfo(scoreVal).text 
           });
         }
       }
@@ -169,7 +171,6 @@ const AnalyticsMobPage = () => {
 
       {isMenuOpen && <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000 }} onClick={() => setIsMenuOpen(false)} />}
 
-      {/* 사이드 메뉴 (메뉴 중앙 정렬 디자인 적용) */}
       <div style={{ position: 'fixed', top: 0, right: 0, width: '100%', height: '100%', backgroundColor: '#111827', zIndex: 1001, transform: isMenuOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.3s ease-in-out', padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', paddingBottom: '16px', borderBottom: '1px solid #374151' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -200,7 +201,8 @@ const AnalyticsMobPage = () => {
         </div>
         
         <div style={{ fontSize: '14px', fontWeight: '700', display: 'flex', alignItems: 'center', cursor: 'pointer'}} onClick={() => setIsMenuOpen(true)}>
-          <span style={{ color: isConnected ? getScoreColor(sensorData.score) : '#94A3B8' }}>{isConnected ? `● ${sensorData.score}` : '○ Offline'}</span>
+          {/* 3. 헤더 색상도 통일된 로직 적용 */}
+          <span style={{ color: isConnected ? getStatusInfo(sensorData.score).color : '#94A3B8' }}>{isConnected ? `● ${sensorData.score}` : '○ Offline'}</span>
           <span style={{ fontSize: '24px', color: '#1A202C', marginLeft: '10px' }}>☰</span>
         </div>
       </header>

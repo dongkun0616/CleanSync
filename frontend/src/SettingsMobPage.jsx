@@ -22,10 +22,13 @@ const SettingsMobPage = () => {
   const [showDeviceModal, setShowDeviceModal] = useState(false);
   const [newDevice, setNewDevice] = useState({ name: '', location: '' });
 
-  const getScoreColor = (score) => {
-    if (score >= 80) return '#10B981';
-    if (score >= 60) return '#F59E0B';
-    return '#EF4444';
+  // 1. 상태 정보 로직 통일
+  const getStatusInfo = (score) => {
+    if (score >= 90) return { text: "매우 쾌적", color: "#059669" };
+    if (score >= 75) return { text: "쾌적", color: "#10B981" };
+    if (score >= 60) return { text: "보통", color: "#F59E0B" };
+    if (score >= 40) return { text: "나쁨", color: "#EF4444" };
+    return { text: "매우 나쁨", color: "#B91C1C" };
   };
 
   const handleSettingChange = (key, val) => {
@@ -49,14 +52,16 @@ const SettingsMobPage = () => {
         });
         setProfile({ userName: profileData.userName || initialUserName, userEmail: profileData.userEmail || '', userSpace: profileData.userSpace || '' });
 
+        // 2. 연결 상태 로직 통일
         const hasDevice = deviceData && deviceData.deviceName;
-        setIsConnected(!!hasDevice);
+        const isConn = hasDevice && deviceData.deviceStatus === '연결됨';
+        setIsConnected(isConn);
         setIsLocked(!(profileData.userName && profileData.userEmail && hasDevice));
 
         if (hasDevice) {
           const currentScore = Number(currentStatus.spaceScore || 0);
           setScore(currentScore);
-          setStatusText(currentScore >= 80 ? "쾌적" : currentScore >= 60 ? "보통" : "혼잡");
+          setStatusText(isConn ? getStatusInfo(currentScore).text : "기기 연결 끊김");
           setDevices([{ id: 1, name: deviceData.deviceName, status: deviceData.deviceStatus, lastConnected: deviceData.lastConnected }]);
         } else {
           setDevices([]); setScore(0); setStatusText("기기 미연결");
@@ -106,7 +111,7 @@ const SettingsMobPage = () => {
       
       {isMenuOpen && <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000 }} onClick={() => setIsMenuOpen(false)} />}
       
-      {/* 햄버거 메뉴 패널 (HomeMobPage와 동일한 구조) */}
+      {/* 햄버거 메뉴 패널 */}
       <div style={{ position: 'fixed', top: 0, right: 0, width: '100%', height: '100%', backgroundColor: '#111827', zIndex: 1001, transform: isMenuOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.3s ease-in-out', padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', paddingBottom: '16px', borderBottom: '1px solid #374151' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -129,7 +134,7 @@ const SettingsMobPage = () => {
         </nav>
       </div>
 
-      {/* 헤더 (HomeMobPage와 동일한 구조) */}
+      {/* 헤더 */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', backgroundColor: '#FFF', borderBottom: '1px solid #F1F5F9' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} onClick={() => navigate('/')}>
           <div style={{ width: '24px', height: '24px', backgroundColor: '#00A8FF', borderRadius: '6px', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>⚡</div>
@@ -137,7 +142,7 @@ const SettingsMobPage = () => {
         </div>
         
         <div style={{ fontSize: '14px', fontWeight: '700', display: 'flex', alignItems: 'center', cursor: 'pointer'}} onClick={() => setIsMenuOpen(true)}>
-          <span style={{ color: isConnected ? getScoreColor(score) : '#94A3B8' }}>{isConnected ? `● ${score}` : '○ Offline'}</span>
+          <span style={{ color: isConnected ? getStatusInfo(score).color : '#94A3B8' }}>{isConnected ? `● ${score}` : '○ Offline'}</span>
           <span style={{ fontSize: '24px', color: '#1A202C', marginLeft: '10px' }}>☰</span>
         </div>
       </header>
