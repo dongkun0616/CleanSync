@@ -33,7 +33,7 @@ const HomeMobPage = () => {
     try {
       // 1. 프로필 정보 불러오기
       const initialUserName = 'dongdong';
-      const settingsRes = await fetch(`http://localhost:5000/settings/profile?userName=${initialUserName}`);
+      const settingsRes = await fetch(`${process.env.REACT_APP_API_URL}/settings/profile?userName=${initialUserName}`);
       const settingsResult = await settingsRes.json();
       
       let userSpace = '동아리방';
@@ -42,7 +42,7 @@ const HomeMobPage = () => {
       }
 
       // 2. 주 사용공간 파라미터 추가하여 데이터 요청
-      const response = await fetch(`http://localhost:5000/home?location=${encodeURIComponent(userSpace)}`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/home?location=${encodeURIComponent(userSpace)}`);
       const result = await response.json();
 
       if (result && result.success && result.data) {

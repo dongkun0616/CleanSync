@@ -41,7 +41,8 @@ const SettingsMobPage = () => {
 
   const fetchData = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/settings?userName=${initialUserName}&location=${locationName}`);
+      // 1. 환경변수 적용 (GET - 초기 데이터 로드)
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/settings?userName=${initialUserName}&location=${locationName}`);
       if (res.data && res.data.success) {
         const { currentStatus, alerts, devices: deviceData, profile: profileData } = res.data.data;
         
@@ -74,26 +75,30 @@ const SettingsMobPage = () => {
 
   const saveSettings = async () => {
     if (isLocked) { alert("기기 등록 및 프로필 저장이 필요합니다."); return; }
-    await axios.put('http://localhost:5000/settings/alerts', { ...settings, userName: profile.userName });
+    // 2. 환경변수 적용 (PUT - 알림 설정 저장)
+    await axios.put(`${process.env.REACT_APP_API_URL}/settings/alerts`, { ...settings, userName: profile.userName });
     alert('설정이 저장되었습니다.');
     fetchData();
   };
 
   const toggleDeviceStatus = async (currentStatus) => {
     const newStatus = currentStatus === '연결됨' ? '연결안됨' : '연결됨';
-    await axios.put('http://localhost:5000/settings/devices', { userName: initialUserName, deviceName: devices[0]?.name, deviceStatus: newStatus });
+    // 3. 환경변수 적용 (PUT - 기기 상태 변경)
+    await axios.put(`${process.env.REACT_APP_API_URL}/settings/devices`, { userName: initialUserName, deviceName: devices[0]?.name, deviceStatus: newStatus });
     fetchData();
   };
 
   const deleteDevice = async () => {
-    await axios.delete('http://localhost:5000/settings/devices', { data: { userName: initialUserName } });
+    // 4. 환경변수 적용 (DELETE - 기기 삭제)
+    await axios.delete(`${process.env.REACT_APP_API_URL}/settings/devices`, { data: { userName: initialUserName } });
     setDevices([]);
     await fetchData();
     alert("기기가 삭제되었습니다.");
   };
 
   const saveProfile = async () => {
-    await axios.put('http://localhost:5000/settings/profile', profile);
+    // 5. 환경변수 적용 (PUT - 프로필 저장)
+    await axios.put(`${process.env.REACT_APP_API_URL}/settings/profile`, profile);
     alert('프로필이 저장되었습니다.');
     fetchData();
   };
@@ -141,7 +146,7 @@ const SettingsMobPage = () => {
           <span style={{ fontWeight: '700', color: '#1A202C' }}>Clean-Sync</span>
         </div>
         
-        <div style={{ fontSize: '14px', fontWeight: '700', display: 'flex', alignItems: 'center', cursor: 'pointer'}} onClick={() => setIsMenuOpen(true)}>
+        <div style={{ fontSize: '14px', fontWeight: '700', display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={() => setIsMenuOpen(true)}>
           <span style={{ color: isConnected ? getStatusInfo(score).color : '#94A3B8' }}>{isConnected ? `● ${score}` : '○ Offline'}</span>
           <span style={{ fontSize: '24px', color: '#1A202C', marginLeft: '10px' }}>☰</span>
         </div>

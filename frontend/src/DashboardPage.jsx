@@ -131,7 +131,7 @@ const DashboardPage = () => {
       try {
         // HomePage.jsx와 동일한 로직 적용
         const initialUserName = 'dongdong'; 
-        const settingsRes = await fetch(`http://localhost:5000/settings/profile?userName=${initialUserName}`, { signal: controller.signal });
+        const settingsRes = await fetch(`${process.env.REACT_APP_API_URL}/settings/profile?userName=${initialUserName}`, { signal: controller.signal });
         const settingsResult = await settingsRes.json();
         
         let userSpace = '동아리방'; 
@@ -139,7 +139,7 @@ const DashboardPage = () => {
           userSpace = settingsResult.data.userSpace;
         }
 
-        const deviceRes = await fetch(`http://localhost:5000/settings/devices?userName=${initialUserName}`, { signal: controller.signal });
+        const deviceRes = await fetch(`${process.env.REACT_APP_API_URL}/settings/devices?userName=${initialUserName}`, { signal: controller.signal });
         const deviceResult = await deviceRes.json();
         
         // 기기가 '연결됨' 상태인지 확인
@@ -148,7 +148,7 @@ const DashboardPage = () => {
           return;
         }
 
-        const response = await fetch(`http://localhost:5000/dashboard?location=${encodeURIComponent(userSpace)}`, { signal: controller.signal });
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard?location=${encodeURIComponent(userSpace)}`, { signal: controller.signal });
         const result = await response.json();
         
         if (result && result.success && result.data) {
@@ -299,7 +299,9 @@ const DashboardPage = () => {
                    <button onClick={() => setDustMode('pm25')} style={{ padding: '4px 12px', borderRadius: '20px', border: dustMode === 'pm25' ? '1px solid #EC4899' : '1px solid rgba(0,0,0,0.1)', backgroundColor: dustMode === 'pm25' ? '#FFFFFF' : 'transparent', color: dustMode === 'pm25' ? '#EC4899' : '#64748B', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>● 초미세먼지 (PM2.5)</button>
                  </div>
                )}
-               <div style={{ height: '240px', width: '100%' }}><Line data={generateChartConfig()} options={chartOptions} /></div>
+                <div style={{ height: '240px', width: '100%' }}>
+                  <Line key={activeTab} data={generateChartConfig()} options={chartOptions} />
+                </div>
             </div>
             <div style={{ position: 'relative', zIndex: 1, backgroundColor: 'rgba(255,255,255,0.82)', backdropFilter: 'blur(16px)', borderRadius: '20px', padding: '22px 24px', border: '1px solid rgba(255,255,255,0.7)', boxShadow: '0 8px 32px rgba(0,0,0,0.05)' }}>
               <div style={{ marginBottom: '14px' }}><span style={{ fontSize: '15px', fontWeight: '700', color: '#1A202C', display: 'block' }}>수집 환경 데이터 종합 이력</span></div>

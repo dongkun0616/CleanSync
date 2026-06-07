@@ -49,9 +49,10 @@ const AnalyticsMobPage = () => {
     try {
       const initialUserName = 'dongdong';
       
+      // 요청 주소를 process.env.REACT_APP_API_URL로 수정 완료
       const [profileRes, deviceRes] = await Promise.all([
-        axios.get(`http://localhost:5000/settings/profile?userName=${initialUserName}`),
-        axios.get(`http://localhost:5000/settings/devices?userName=${initialUserName}`)
+        axios.get(`${process.env.REACT_APP_API_URL}/settings/profile?userName=${initialUserName}`),
+        axios.get(`${process.env.REACT_APP_API_URL}/settings/devices?userName=${initialUserName}`)
       ]);
 
       // 2. 기기 연결 상태 판별
@@ -64,7 +65,8 @@ const AnalyticsMobPage = () => {
       let userSpace = profileRes.data?.data?.userSpace || '동아리방';
       const rangeCode = range.replace('시간', 'h');
       
-      const response = await axios.get(`http://localhost:5000/analytics?range=${rangeCode}&location=${encodeURIComponent(userSpace)}`);
+      // 요청 주소를 process.env.REACT_APP_API_URL로 수정 완료
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/analytics?range=${rangeCode}&location=${encodeURIComponent(userSpace)}`);
       
       if (response.data && response.data.success) {
         const data = response.data.data;
@@ -201,7 +203,6 @@ const AnalyticsMobPage = () => {
         </div>
         
         <div style={{ fontSize: '14px', fontWeight: '700', display: 'flex', alignItems: 'center', cursor: 'pointer'}} onClick={() => setIsMenuOpen(true)}>
-          {/* 3. 헤더 색상도 통일된 로직 적용 */}
           <span style={{ color: isConnected ? getStatusInfo(sensorData.score).color : '#94A3B8' }}>{isConnected ? `● ${sensorData.score}` : '○ Offline'}</span>
           <span style={{ fontSize: '24px', color: '#1A202C', marginLeft: '10px' }}>☰</span>
         </div>

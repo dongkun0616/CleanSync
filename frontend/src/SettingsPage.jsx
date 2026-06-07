@@ -97,12 +97,13 @@ const SettingsPage = () => {
   // 데이터 불러오기 함수
   const fetchData = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/settings?userName=${initialUserName}&location=${locationName}`);
+      // 1. 환경변수 적용 완료 (GET)
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/settings?userName=${initialUserName}&location=${locationName}`);
       
       if (res.data && res.data.success) {
         const { currentStatus, alerts, devices: deviceData, profile: profileData } = res.data.data;
         
-        // 1. 프로필 정보와 알림 설정은 무조건 화면에 반영
+        // 프로필 정보와 알림 설정 화면에 반영
         setSettings({
           emailAlert: alerts.emailAlertEnabled,
           pushAlert: alerts.pushAlertEnabled,
@@ -120,17 +121,17 @@ const SettingsPage = () => {
           userSpace: profileData.userSpace || ''
         });
 
-        // 2. 잠금 상태(isLocked) 결정: 프로필이 있고, 기기도 연결되어 있어야 알림 설정 가능
+        // 잠금 상태(isLocked) 결정: 프로필이 있고, 기기도 연결되어 있어야 알림 설정 가능
         const hasProfile = profileData.userName && profileData.userEmail;
         const hasDevice = deviceData && deviceData.deviceName;
 
         if (hasProfile && hasDevice) {
-          setIsLocked(false); // 둘 다 있으면 잠금 해제
+          setIsLocked(false);
         } else {
-          setIsLocked(true);  // 하나라도 없으면 잠금
+          setIsLocked(true);
         }
 
-        // 3. 기기 데이터가 없는 경우의 처리 (점수 초기화 및 화면 처리)
+        // 기기 데이터가 없는 경우의 처리
         if (!hasDevice) {
             setDevices([]);
             setScore(0);
@@ -138,7 +139,7 @@ const SettingsPage = () => {
             return; 
         }
 
-        // 4. 기기가 있는 경우의 처리
+        // 기기가 있는 경우의 처리
         const currentScore = Number(currentStatus.spaceScore || 0);
         setScore(currentScore);
         setStatusText(getStatusLevel(currentScore));
@@ -163,7 +164,8 @@ const SettingsPage = () => {
   const toggleDeviceStatus = async (currentStatus) => {
     const newStatus = currentStatus === '연결됨' ? '연결안됨' : '연결됨';
     try {
-      const res = await axios.put('http://localhost:5000/settings/devices', {
+      // 2. 환경변수 적용 완료 (PUT - 기기 상태)
+      const res = await axios.put(`${process.env.REACT_APP_API_URL}/settings/devices`, {
         userName: initialUserName,
         deviceName: devices[0]?.name || '내 기기',
         deviceStatus: newStatus
@@ -204,7 +206,8 @@ const SettingsPage = () => {
         userName: profile.userName
       };
       
-      await axios.put('http://localhost:5000/settings/alerts', payload);
+      // 3. 환경변수 적용 완료 (PUT - 알림 설정)
+      await axios.put(`${process.env.REACT_APP_API_URL}/settings/alerts`, payload);
       alert('설정이 저장되었습니다.');
       fetchData();
     } catch (err) {
@@ -215,7 +218,8 @@ const SettingsPage = () => {
 
   const deleteDevice = async (deviceId) => {
     try {
-      const res = await axios.delete('http://localhost:5000/settings/devices', {
+      // 4. 환경변수 적용 완료 (DELETE - 기기 삭제)
+      const res = await axios.delete(`${process.env.REACT_APP_API_URL}/settings/devices`, {
         data: { userName: initialUserName }
       });
       
@@ -248,7 +252,8 @@ const SettingsPage = () => {
 
   const saveProfile = async () => {
     try {
-      const res = await axios.put('http://localhost:5000/settings/profile', {
+      // 5. 환경변수 적용 완료 (PUT - 프로필 저장)
+      const res = await axios.put(`${process.env.REACT_APP_API_URL}/settings/profile`, {
         userName: profile.userName,
         userEmail: profile.userEmail,
         userSpace: profile.userSpace
@@ -286,7 +291,6 @@ const SettingsPage = () => {
           </div>
         </div>
 
-        {/* 🚨 OFFLINE 지원을 위해 조건부 렌더링 적용된 부분 🚨 */}
         <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '18px', marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <span style={{ fontSize: '12px', color: '#6B7A99', fontWeight: '600' }}>학습 지수</span>

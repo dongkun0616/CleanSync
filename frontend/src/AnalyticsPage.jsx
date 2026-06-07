@@ -71,14 +71,14 @@ const AnalyticsPage = () => {
   }, []);
 
   useEffect(() => {
-    const fetchData = async (a) => {
+    const fetchData = async () => {
       try {
         const initialUserName = 'dongdong';
         
-        // 1. 프로필 정보와 기기 연결 상태를 둘 다 확인!
+        // 1. 프로필 정보와 기기 연결 상태 주소를 환경변수(REACT_APP_API_URL)로 교체합니다.
         const [profileRes, deviceRes] = await Promise.all([
-          axios.get(`http://localhost:5000/settings/profile?userName=${initialUserName}`),
-          axios.get(`http://localhost:5000/settings/devices?userName=${initialUserName}`)
+          axios.get(`${process.env.REACT_APP_API_URL}/settings/profile?userName=${initialUserName}`),
+          axios.get(`${process.env.REACT_APP_API_URL}/settings/devices?userName=${initialUserName}`)
         ]);
         
         // 🚨 기기 연결이 끊겨있으면 여기서 바로 차단!
@@ -93,8 +93,8 @@ const AnalyticsPage = () => {
         const rangeMap = { '1시간': '1h', '6시간': '6h', '12시간': '12h', '24시간': '24h' };
         const range = rangeMap[timeFilter] || '6h';
         
-        // 2. 연결되어 있을 때만 통계 데이터 요청
-        const url = `http://localhost:5000/analytics?range=${range}&location=${encodeURIComponent(userSpace)}`;
+        // 2. 통계 데이터 요청 주소도 환경변수(REACT_APP_API_URL)로 교체합니다.
+        const url = `${process.env.REACT_APP_API_URL}/analytics?range=${range}&location=${encodeURIComponent(userSpace)}`;
         const res = await axios.get(url);
         
         if (res.data && res.data.success && res.data.data) {
@@ -186,7 +186,7 @@ const AnalyticsPage = () => {
 
   return (
     <div style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', display: 'flex', boxSizing: 'border-box' }}>
-      <style>{`@import url('https://webfontworld.github.io/pretendard/Pretendard.css'); @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&display=swap'); * { font-family: 'Pretendard', sans-serif; box-sizing: border-box; }`}</style>
+      <style>{`@import url('https://webfontworld.github.io/pretendard/Pretendard.css'); @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght=400;500;700&display=swap'); * { font-family: 'Pretendard', sans-serif; box-sizing: border-box; }`}</style>
       <aside style={{ width: '230px', minWidth: '230px', height: '100%', background: 'linear-gradient(180deg, #0F1623 0%, #161C2D 100%)', color: '#FFF', padding: '28px 20px', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `linear-gradient(135deg, ${theme.color}, ${theme.color}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', boxShadow: `0 4px 12px ${theme.color}44` }}>⚡</div>
@@ -213,7 +213,7 @@ const AnalyticsPage = () => {
       <main style={{ flex: 1, position: 'relative', overflowY: 'auto', background: theme.bg, transition: 'background 0.8s ease', display: 'flex', flexDirection: 'column', padding: '40px 48px' }}>
         <ParticleBg color={theme.color} />
         
-        {/* 🚨 핵심: 기기 연결 끊김 시 홈 화면과 동일한 디자인 적용 🚨 */}
+        {/* 🚨 기기 연결 끊김 시 홈 화면과 동일한 디자인 적용 */}
         {!isConnected ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
             <h2 style={{ fontSize: '32px', color: '#475569', marginBottom: '16px', fontWeight: '800' }}>현재 기기가 연결되어 있지 않습니다.</h2>

@@ -31,10 +31,10 @@ const DashboardMobPage = () => {
     try {
       const initialUserName = 'dongdong';
       
-      // 1. 프로필 정보와 기기 상태를 같이 불러옵니다.
+      // 1. 환경변수(REACT_APP_API_URL) 적용하여 프로필 정보와 기기 상태를 같이 불러옵니다.
       const [profileRes, deviceRes] = await Promise.all([
-        fetch(`http://localhost:5000/settings/profile?userName=${initialUserName}`),
-        fetch(`http://localhost:5000/settings/devices?userName=${initialUserName}`)
+        fetch(`${process.env.REACT_APP_API_URL}/settings/profile?userName=${initialUserName}`),
+        fetch(`${process.env.REACT_APP_API_URL}/settings/devices?userName=${initialUserName}`)
       ]);
       
       const profileResult = await profileRes.json();
@@ -48,8 +48,8 @@ const DashboardMobPage = () => {
       
       let userSpace = profileResult?.data?.userSpace || '동아리방';
 
-      // 2. 포트 5000번 적용 및 공간 파라미터 전송
-      const response = await fetch(`http://localhost:5000/dashboard?location=${encodeURIComponent(userSpace)}`);
+      // 2. 환경변수 적용 및 공간 파라미터 전송
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard?location=${encodeURIComponent(userSpace)}`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const result = await response.json();
@@ -58,8 +58,12 @@ const DashboardMobPage = () => {
         setIsConnected(true);
         const current = result.data.current;
 
+        // PC 버전과 동일하게 점수 스케일링 보정 로직 적용
+        const rawScore = Number(current.score || 0);
+        const scaledScore = rawScore > 100 ? Math.round(rawScore / 10) : rawScore;
+
         setSensorData({
-          score: Number(current.score || 0),
+          score: scaledScore,
           co2: Number(current.co2 || 0),
           noise: Number(current.noise || 0),
           temp: Number(current.temperature || 0),
@@ -72,6 +76,7 @@ const DashboardMobPage = () => {
       }
     } catch (err) {
       console.error('데이터 로드 실패:', err);
+      setIsConnected(false);
     }
   };
 
@@ -128,7 +133,7 @@ const DashboardMobPage = () => {
 
       {isMenuOpen && <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000 }} onClick={() => setIsMenuOpen(false)} />}
 
-      {/* 사이드 메뉴 (HomeMobPage 디자인과 동일하게 수정) */}
+      {/* 사이드 메뉴 */}
       <div style={{ position: 'fixed', top: 0, right: 0, width: '100%', height: '100%', backgroundColor: '#111827', zIndex: 1001, transform: isMenuOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.3s ease-in-out', padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', paddingBottom: '16px', borderBottom: '1px solid #374151' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -184,7 +189,7 @@ const DashboardMobPage = () => {
               return (
                 <div key={i} style={{ padding: '16px', borderRadius: '16px', border: '1px solid #F1F5F9', backgroundColor: '#FFFFFF', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <img src={s.icon} alt={s.label} style={{ width: s.key === 'temp' || s.key === 'humi' ? '28px' : '28px', height: s.key === 'temp' || s.key === 'humi' ? '28' : '28px', objectFit: 'contain' }} />
+                    <img src={s.icon} alt={s.label} style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
                     <div style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '12px', color: status.color, backgroundColor: status.bgColor }}>{status.text}</div>
                   </div>
                   <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '4px' }}>{s.label}</div>
