@@ -1,1023 +1,383 @@
-import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
-import "./SettingsPage.css";
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
+import * as Utils from './SettingsUtils';
+import { AlarmTab, DeviceTab, ProfileTab } from './components/Tabs';
+import './SettingsPage.css';
 
-const API_BASE_URL = "http://13.124.252.181:3000";
-
-const defaultSettings = {
-  emailAlert: true,
-  pushAlert: false,
-  dailyReport: true,
-  weeklyReport: false,
-  co2: 1000,
-  noise: 55,
-  temp: 27,
-  dust: 35,
+// 파티클 배경 컴포넌트
+const ParticleBg = ({ color }) => {
+  const canvasRef = useRef(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let raf;
+    const resize = () => { canvas.width = canvas.offsetWidth; canvas.height = canvas.offsetHeight; };
+    resize();
+    window.addEventListener('resize', resize);
+    const NUM = 28;
+    const particles = Array.from({ length: NUM }, () => ({
+      x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+      r: Math.random() * 5 + 2, dx: (Math.random() - 0.5) * 0.3,
+      dy: (Math.random() - 0.5) * 0.3, alpha: Math.random() * 0.25 + 0.05,
+    }));
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach((p) => {
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        const hexColor = color.replace('#', '');
+        ctx.fillStyle = '#' + hexColor + Math.floor(p.alpha * 255).toString(16).padStart(2, '0');
+        ctx.fill();
+        p.x += p.dx; p.y += p.dy;
+        if (p.x < 0) p.x = canvas.width; if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height; if (p.y > canvas.height) p.y = 0;
+      });
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+  }, [color]);
+  return <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} />;
 };
 
-const defaultProfile = {
-  name: "123",
-  email: "123@gmail.com",
-  space: "101호",
-};
-
-const getTheme = (score) => {
-  if (score >= 80) {
-    return {
-      color: "#10B981",
-      bg: "linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)",
-      rgb: "16, 185, 129",
-    };
-  }
-
-  if (score >= 60) {
-    return {
-      color: "#F59E0B",
-      bg: "linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)",
-      rgb: "245, 158, 11",
-    };
-  }
-
-  return {
-    color: "#EF4444",
-    bg: "linear-gradient(135deg, #FEE2E2 0%, #FFF5F5 100%)",
-    rgb: "239, 68, 68",
+const SettingsPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const initialUserName = 'dongdong'; 
+  const locationName = '동아리방';
+  
+  const getStatusLevel = (score) => {
+    if (score >= 90) return "매우 쾌적";
+    if (score >= 75) return "쾌적";
+    if (score >= 60) return "보통";
+    if (score >= 40) return "나쁨";
+    return "매우 나쁨";
   };
-};
+  
+  const [score, setScore] = useState(0);
+  const [statusText, setStatusText] = useState('데이터 로딩 중...');
 
-const getStatusText = (score) => {
-  if (score >= 80) return "쾌적";
-  if (score >= 60) return "보통";
-  return "혼잡";
-};
-
-const normalizeSettingsFromApi = (data) => ({
-  emailAlert: Boolean(
-    data.emailAlert ??
-      data.EMAIL_ALERT ??
-      data.emailAlertEnabled ??
-      data.email_alert ??
-      defaultSettings.emailAlert
-  ),
-  pushAlert: Boolean(
-    data.pushAlert ??
-      data.PUSH_ALERT ??
-      data.pushAlertEnabled ??
-      data.push_alert ??
-      defaultSettings.pushAlert
-  ),
-  dailyReport: Boolean(
-    data.dailyReport ??
-      data.DAILY_REPORT ??
-      data.dailyReportEnabled ??
-      data.daily_report ??
-      defaultSettings.dailyReport
-  ),
-  weeklyReport: Boolean(
-    data.weeklyReport ??
-      data.WEEKLY_REPORT ??
-      data.weeklyReportEnabled ??
-      data.weekly_report ??
-      defaultSettings.weeklyReport
-  ),
-  co2: Number(
-    data.co2 ?? data.CO2_THRESHOLD ?? data.co2Threshold ?? defaultSettings.co2
-  ),
-  noise: Number(
-    data.noise ??
-      data.NOS_THRESHOLD ??
-      data.noiseThreshold ??
-      data.nosThreshold ??
-      defaultSettings.noise
-  ),
-  temp: Number(
-    data.temp ??
-      data.TEMP_THRESHOLD ??
-      data.tempThreshold ??
-      defaultSettings.temp
-  ),
-  dust: Number(
-    data.dust ??
-      data.DUST_THRESHOLD ??
-      data.dustThreshold ??
-      defaultSettings.dust
-  ),
-});
-
-const normalizeProfileFromApi = (data) => ({
-  name: data.name ?? data.USER_NAME ?? data.userName ?? defaultProfile.name,
-  email:
-    data.email ?? data.USER_EMAIL ?? data.userEmail ?? defaultProfile.email,
-  space: data.space ?? data.USER_SPACE ?? data.userSpace ?? defaultProfile.space,
-});
-
-const createSettingsPayload = (settings) => ({
-  emailAlert: settings.emailAlert,
-  pushAlert: settings.pushAlert,
-  dailyReport: settings.dailyReport,
-  weeklyReport: settings.weeklyReport,
-  co2: settings.co2,
-  noise: settings.noise,
-  temp: settings.temp,
-  dust: settings.dust,
-
-  EMAIL_ALERT: settings.emailAlert,
-  PUSH_ALERT: settings.pushAlert,
-  DAILY_REPORT: settings.dailyReport,
-  WEEKLY_REPORT: settings.weeklyReport,
-  CO2_THRESHOLD: settings.co2,
-  NOS_THRESHOLD: settings.noise,
-  TEMP_THRESHOLD: settings.temp,
-  DUST_THRESHOLD: settings.dust,
-});
-
-const createProfilePayload = (profile) => ({
-  name: profile.name,
-  email: profile.email,
-  space: profile.space,
-
-  USER_NAME: profile.name,
-  USER_EMAIL: profile.email,
-  USER_SPACE: profile.space,
-  userName: profile.name,
-  userEmail: profile.email,
-  userSpace: profile.space,
-});
-
-function SettingsPage() {
-  const [settingTab, setSettingTab] = useState("alarm");
-  const [mobileSettingPage, setMobileSettingPage] = useState(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const [settings, setSettings] = useState(() => {
-    const saved = localStorage.getItem("cleanSyncSettings");
-    return saved ? JSON.parse(saved) : defaultSettings;
-  });
-
-  const [profile, setProfile] = useState(() => {
-    const saved = localStorage.getItem("cleanSyncProfile");
-    return saved ? JSON.parse(saved) : defaultProfile;
-  });
-
-  const [score, setScore] = useState(45);
-  const [lastUpdate, setLastUpdate] = useState(null);
-
-  const theme = getTheme(score);
-  const statusText = getStatusText(score);
-
-  const [devices, setDevices] = useState(() => {
-    const saved = localStorage.getItem("cleanSyncDevices");
-
-    return saved
-      ? JSON.parse(saved)
-      : [
-          {
-            id: 1,
-            name: "교실 A 센서",
-            location: "3층 301호",
-            time: "방금 전",
-            status: "연결됨",
-          },
-          {
-            id: 2,
-            name: "도서관 센서",
-            location: "2층 열람실",
-            time: "1분 전",
-            status: "연결됨",
-          },
-          {
-            id: 3,
-            name: "복도 센서",
-            location: "3층 복도",
-            time: "2시간 전",
-            status: "오프라인",
-          },
-        ];
-  });
-
+  const [activeTab, setActiveTab] = useState('alarm');
+  const [settings, setSettings] = useState({ emailAlert: true, pushAlert: false, dailyReport: true, weeklyReport: false, co2: 1000, noise: 55, temp: 27, dust: 35 });
+  const [devices, setDevices] = useState([]);
   const [showDeviceModal, setShowDeviceModal] = useState(false);
-  const [newDevice, setNewDevice] = useState({
-    name: "",
-    location: "",
-  });
+  const [newDevice, setNewDevice] = useState({ name: '', location: '' });
+  
+  const [profile, setProfile] = useState({ userName: '', userEmail: '', userSpace: '' });
+  const [isLocked, setIsLocked] = useState(true);
+  const [lastUpdate] = useState(new Date());
 
-  const activeSetting = mobileSettingPage || settingTab;
+  // 🚨 기기 연결 상태 판별
+  const isConnected = devices.length > 0;
 
-  const formatTime = (date) => {
-    if (!date) return "--:--:--";
+  // 🚨 다른 페이지와 동일한 테마 색상 로직 적용 (OFFLINE 상태 지원)
+  const getTheme = (score, isConnected) => {
+    if (!isConnected) return { color: '#94A3B8', bg: 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)' };
+    if (score >= 90) return { color: "#059669", bg: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)' };
+    if (score >= 75) return { color: "#10B981", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
+    if (score >= 60) return { color: "#F59E0B", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
+    if (score >= 40) return { color: "#EF4444", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
+    return { color: "#B91C1C", bg: 'linear-gradient(135deg, #FEE2E2 0%, #FFF5F5 100%)' };
+  };
+  const theme = getTheme(score, isConnected);
 
-    return `${String(date.getHours()).padStart(2, "0")}:${String(
-      date.getMinutes()
-    ).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
+  // 🚨 줌 방지 로직 적용
+  useEffect(() => {
+    const handleWheel = (e) => { if (e.ctrlKey || e.metaKey) e.preventDefault(); };
+    const handleKeyDown = (e) => { if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '0')) e.preventDefault(); };
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
+  // 데이터 불러오기 함수
+  const fetchData = async () => {
+    try {
+      // 1. 환경변수 적용 완료 (GET)
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/settings?userName=${initialUserName}&location=${locationName}`);
+      
+      if (res.data && res.data.success) {
+        const { currentStatus, alerts, devices: deviceData, profile: profileData } = res.data.data;
+        
+        // 프로필 정보와 알림 설정 화면에 반영
+        setSettings({
+          emailAlert: alerts.emailAlertEnabled,
+          pushAlert: alerts.pushAlertEnabled,
+          dailyReport: alerts.dailyReportEnabled,
+          weeklyReport: alerts.weeklyReportEnabled,
+          co2: alerts.co2Threshold,
+          noise: alerts.noiseThreshold,
+          temp: alerts.temperatureThreshold,
+          dust: alerts.dustThreshold
+        });
+        
+        setProfile({
+          userName: profileData.userName || initialUserName,
+          userEmail: profileData.userEmail || '',
+          userSpace: profileData.userSpace || ''
+        });
+
+        // 잠금 상태(isLocked) 결정: 프로필이 있고, 기기도 연결되어 있어야 알림 설정 가능
+        const hasProfile = profileData.userName && profileData.userEmail;
+        const hasDevice = deviceData && deviceData.deviceName;
+
+        if (hasProfile && hasDevice) {
+          setIsLocked(false);
+        } else {
+          setIsLocked(true);
+        }
+
+        // 기기 데이터가 없는 경우의 처리
+        if (!hasDevice) {
+            setDevices([]);
+            setScore(0);
+            setStatusText("기기 미연결");
+            return; 
+        }
+
+        // 기기가 있는 경우의 처리
+        const currentScore = Number(currentStatus.spaceScore || 0);
+        setScore(currentScore);
+        setStatusText(getStatusLevel(currentScore));
+
+        const formattedDevices = [{
+          id: 1, 
+          name: deviceData.deviceName,
+          status: deviceData.deviceStatus || '연결안됨',
+          lastConnected: deviceData.lastConnected || '없음'
+        }];
+        setDevices(formattedDevices);
+      }
+    } catch (err) {
+      console.error("데이터를 가져오는 중 에러 발생", err);
+    }
   };
 
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/settings`);
-
-        if (!response.ok) {
-          throw new Error("설정 조회 실패");
-        }
-
-        const result = await response.json();
-        const apiData = result.data || result;
-        const apiSettings = normalizeSettingsFromApi(apiData);
-
-        setSettings(apiSettings);
-        localStorage.setItem("cleanSyncSettings", JSON.stringify(apiSettings));
-      } catch (error) {
-        console.error("설정 불러오기 실패:", error);
-      }
-    };
-
-    const loadProfile = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/settings/profile`);
-
-        if (!response.ok) {
-          throw new Error("프로필 조회 실패");
-        }
-
-        const result = await response.json();
-        const apiData = result.data || result;
-        const apiProfile = normalizeProfileFromApi(apiData);
-
-        setProfile(apiProfile);
-        localStorage.setItem("cleanSyncProfile", JSON.stringify(apiProfile));
-      } catch (error) {
-        console.error("프로필 불러오기 실패:", error);
-      }
-    };
-
-    const loadDevices = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/settings/devices`);
-
-        if (!response.ok) {
-          throw new Error("기기 조회 실패");
-        }
-
-        const result = await response.json();
-        const apiData = result.data || result;
-
-        if (Array.isArray(apiData)) {
-          setDevices(apiData);
-          localStorage.setItem("cleanSyncDevices", JSON.stringify(apiData));
-        }
-      } catch (error) {
-        console.error("기기 목록 불러오기 실패:", error);
-      }
-    };
-
-    const loadScore = async () => {
-      try {
-        const response = await fetch("/api/home");
-        const result = await response.json();
-
-        if (result?.success && result?.data) {
-          setScore(Number(result.data.score || 45));
-          setLastUpdate(new Date());
-          return;
-        }
-      } catch (error) {
-        console.error("점수 불러오기 실패:", error);
-      }
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/home-status`);
-        if (!response.ok) return;
-
-        const result = await response.json();
-        const data = result.data || result;
-
-        if (data.spaceScore) {
-          setScore(Number(data.spaceScore));
-        } else if (data.SPACE_SCORE) {
-          setScore(Number(data.SPACE_SCORE));
-        }
-
-        setLastUpdate(new Date());
-      } catch (error) {
-        console.error("AWS 점수 불러오기 실패:", error);
-      }
-    };
-
-    loadSettings();
-    loadProfile();
-    loadDevices();
-    loadScore();
-
-    const interval = setInterval(loadScore, 3000);
-    return () => clearInterval(interval);
+    fetchData();
   }, []);
 
-  const handleSettingChange = (key, value) => {
-    setSettings({
-      ...settings,
-      [key]: value,
-    });
+  const toggleDeviceStatus = async (currentStatus) => {
+    const newStatus = currentStatus === '연결됨' ? '연결안됨' : '연결됨';
+    try {
+      // 2. 환경변수 적용 완료 (PUT - 기기 상태)
+      const res = await axios.put(`${process.env.REACT_APP_API_URL}/settings/devices`, {
+        userName: initialUserName,
+        deviceName: devices[0]?.name || '내 기기',
+        deviceStatus: newStatus
+      });
+      if (res.data.success) {
+        fetchData();
+        alert(`기기 상태가 ${newStatus}로 변경되었습니다.`);
+      }
+    } catch (err) {
+      console.error("기기 상태 변경 에러", err);
+      alert('상태 변경에 실패했습니다.');
+    }
   };
 
-  const handleProfileChange = (key, value) => {
-    setProfile({
-      ...profile,
-      [key]: value,
-    });
+  const handleSettingChange = (key, val) => {
+    if (isLocked) {
+      alert("기기가 등록되어 있고, 프로필 정보가 저장되어야 알림을 설정할 수 있습니다.");
+      return;
+    }
+    setSettings({ ...settings, [key]: val });
   };
 
   const saveSettings = async () => {
-    localStorage.setItem("cleanSyncSettings", JSON.stringify(settings));
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/settings`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(createSettingsPayload(settings)),
-      });
-
-      if (!response.ok) {
-        throw new Error("설정 저장 실패");
-      }
-
-      alert("설정이 저장되었습니다.");
-    } catch (error) {
-      console.error("설정 저장 실패:", error);
-      alert("서버 저장은 실패했지만 브라우저에는 저장되었습니다.");
+    if (isLocked) {
+      alert("기기가 등록되어 있고, 프로필 정보가 저장되어야 알림을 설정할 수 있습니다.");
+      return;
     }
+    try {
+      const payload = {
+        emailAlertEnabled: settings.emailAlert,
+        pushAlertEnabled: settings.pushAlert,
+        dailyReportEnabled: settings.dailyReport,
+        weeklyReportEnabled: settings.weeklyReport,
+        co2Threshold: settings.co2,
+        noiseThreshold: settings.noise,
+        temperatureThreshold: settings.temp,
+        dustThreshold: settings.dust,
+        userName: profile.userName
+      };
+      
+      // 3. 환경변수 적용 완료 (PUT - 알림 설정)
+      await axios.put(`${process.env.REACT_APP_API_URL}/settings/alerts`, payload);
+      alert('설정이 저장되었습니다.');
+      fetchData();
+    } catch (err) {
+      console.error("설정 저장 에러", err);
+      alert('설정 저장에 실패했습니다.');
+    }
+  };
+
+  const deleteDevice = async (deviceId) => {
+    try {
+      // 4. 환경변수 적용 완료 (DELETE - 기기 삭제)
+      const res = await axios.delete(`${process.env.REACT_APP_API_URL}/settings/devices`, {
+        data: { userName: initialUserName }
+      });
+      
+      if (res.data.success) {
+        setDevices([]);
+        await fetchData(); 
+        alert("기기가 삭제되었습니다.");
+      } else {
+        alert("삭제 요청은 보냈으나 실패했습니다.");
+      }
+    } catch (err) {
+      console.error("기기 삭제 통신 실패:", err);
+      alert('기기 삭제에 실패했습니다. (콘솔 확인)');
+    }
+  };
+  
+  const addDevice = () => {
+    if (!newDevice.name.trim()) {
+        alert("기기 이름을 입력해주세요.");
+        return;
+    }
+    setDevices([...devices, { ...newDevice, id: Date.now(), time: '방금', status: '연결됨' }]);
+    setShowDeviceModal(false);
+    setNewDevice({ name: '', location: '' });
+  };
+  
+  const handleProfileChange = (key, val) => {
+    setProfile(prev => ({ ...prev, [key]: val }));
   };
 
   const saveProfile = async () => {
-    localStorage.setItem("cleanSyncProfile", JSON.stringify(profile));
-
     try {
-      const response = await fetch(`${API_BASE_URL}/settings/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(createProfilePayload(profile)),
+      // 5. 환경변수 적용 완료 (PUT - 프로필 저장)
+      const res = await axios.put(`${process.env.REACT_APP_API_URL}/settings/profile`, {
+        userName: profile.userName,
+        userEmail: profile.userEmail,
+        userSpace: profile.userSpace
       });
 
-      if (!response.ok) {
-        throw new Error("프로필 저장 실패");
+      if (res.data && res.data.success) {
+        alert('프로필이 저장되었습니다.');
+        fetchData();
+      } else {
+        alert('저장에 실패했습니다: ' + (res.data.message || '알 수 없는 오류'));
       }
-
-      alert("프로필이 저장되었습니다.");
-    } catch (error) {
-      console.error("프로필 저장 실패:", error);
-      alert("서버 저장은 실패했지만 브라우저에는 저장되었습니다.");
+    } catch (err) {
+      alert('서버와 통신하는 중 오류가 발생했습니다. (콘솔을 확인하세요)');
     }
   };
-
-  const deleteDevice = (id) => {
-    const updatedDevices = devices.filter((device) => device.id !== id);
-
-    setDevices(updatedDevices);
-    localStorage.setItem("cleanSyncDevices", JSON.stringify(updatedDevices));
-  };
-
-  const addDevice = async () => {
-    if (newDevice.name.trim() === "" || newDevice.location.trim() === "") {
-      alert("기기 이름과 설치 위치를 입력해주세요.");
-      return;
-    }
-
-    const device = {
-      id: Date.now(),
-      name: newDevice.name,
-      location: newDevice.location,
-      time: "방금 전",
-      status: "연결됨",
-    };
-
-    const updatedDevices = [...devices, device];
-
-    setDevices(updatedDevices);
-    localStorage.setItem("cleanSyncDevices", JSON.stringify(updatedDevices));
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/settings/devices`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          deviceName: device.name,
-          deviceLocation: device.location,
-          deviceStatus: device.status,
-          devices: updatedDevices,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("기기 저장 실패");
-      }
-
-      setNewDevice({ name: "", location: "" });
-      setShowDeviceModal(false);
-      alert("기기가 추가되었습니다.");
-    } catch (error) {
-      console.error("기기 저장 실패:", error);
-      setNewDevice({ name: "", location: "" });
-      setShowDeviceModal(false);
-      alert("서버 저장은 실패했지만 브라우저에는 저장되었습니다.");
-    }
-  };
+  
+  const formatTime = (d) => d
+    ? `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`
+    : '--:--:--';
 
   return (
-    <div
-      className="settings-with-sidebar"
-      style={{
-        "--settings-bg": theme.bg,
-        "--settings-color": theme.color,
-        "--settings-rgb": theme.rgb,
-      }}
-    >
-      <aside className="settings-pc-sidebar">
-        <div className="settings-sidebar-logo">
-          <div className="settings-sidebar-logo-icon">⚡</div>
+    <div style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', display: 'flex', fontFamily: "'Pretendard', sans-serif", boxSizing: 'border-box' }}>
+      <style>{`
+        @import url('https://webfontworld.github.io/pretendard/Pretendard.css');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;800&display=swap');
+        * { font-family: 'Pretendard', sans-serif; }
+      `}</style>
 
+      <aside style={{ width: '230px', minWidth: '230px', height: '100%', background: 'linear-gradient(180deg, #0F1623 0%, #161C2D 100%)', color: '#FFF', padding: '28px 20px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `linear-gradient(135deg, ${theme.color}, ${theme.color}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', boxShadow: `0 4px 12px ${theme.color}44` }}>⚡</div>
           <div>
-            <strong>Clean-Sync</strong>
-            <p>학습 환경 모니터</p>
+            <div style={{ fontSize: '17px', fontWeight: '700', letterSpacing: '-0.3px' }}>Clean-Sync</div>
+            <div style={{ fontSize: '10px', color: '#6B7A99', marginTop: '1px' }}>학습 환경 모니터</div>
           </div>
         </div>
 
-        <div className="settings-sidebar-score">
-          <div className="score-top">
-            <span>학습 지수</span>
-            <b>● LIVE</b>
+        <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '18px', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <span style={{ fontSize: '12px', color: '#6B7A99', fontWeight: '600' }}>학습 지수</span>
+            <span style={{ fontSize: '11px', color: isConnected ? '#10B981' : '#94A3B8', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isConnected ? '#10B981' : '#94A3B8', display: 'inline-block' }} />
+              {isConnected ? 'LIVE' : 'OFFLINE'}
+            </span>
           </div>
-
-          <div className="score-number">
-            {score} <span>/ 100</span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+            <span style={{ fontSize: '48px', fontWeight: '800', color: theme.color, lineHeight: 1, fontFamily: "'DM Mono', monospace", transition: 'all 0.5s ease' }}>
+              {isConnected ? score : '--'}
+            </span>
+            <span style={{ fontSize: '14px', color: '#4A5568' }}>/ 100</span>
           </div>
-
-          <div className="score-status">{statusText}</div>
+          <div style={{ fontSize: '14px', fontWeight: '700', color: theme.color, marginTop: '8px' }}>
+            {isConnected ? statusText : '기기 연결 끊김'}
+          </div>
         </div>
 
-        <nav className="settings-sidebar-nav">
-          <NavLink to="/home">
-            홈
-            <span>현재 상태</span>
-          </NavLink>
-
-          <NavLink to="/dashboard">
-            대시보드
-            <span>실시간 센서</span>
-          </NavLink>
-
-          <NavLink to="/analytics">
-            통계
-            <span>기록 분석</span>
-          </NavLink>
-
-          <NavLink to="/settings">
-            설정
-            <span>환경 설정</span>
-          </NavLink>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+          {[
+            { label: '홈', sub: '현재 상태', path: '/' },
+            { label: '대시보드', sub: '실시간 센서', path: '/dashboard' },
+            { label: '통계', sub: '기록 분석', path: '/analytics' },
+            { label: '설정', sub: '환경 설정', path: '/settings' },
+          ].map(({ label, sub, path }) => {
+            const isActive = location.pathname === path;
+            return (
+              <div 
+                key={label} 
+                onClick={() => navigate(path)} 
+                style={{ 
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  padding: '12px 14px', borderRadius: '10px', cursor: 'pointer', 
+                  background: isActive ? `linear-gradient(90deg, ${theme.color}22, transparent)` : 'transparent', 
+                  borderLeft: isActive ? `3px solid ${theme.color}` : '3px solid transparent', 
+                  transition: 'all 0.2s ease', textAlign: 'center'
+                }}
+              >
+                <div style={{ fontSize: '13px', fontWeight: isActive ? '700' : '500', color: isActive ? '#FFF' : '#6B7A99' }}>{label}</div>
+                <div style={{ fontSize: '10px', color: '#4A5568', marginTop: '4px' }}>{sub}</div>
+              </div>
+            );
+          })}
         </nav>
 
-        <div className="settings-sidebar-footer">
+        <div style={{ fontSize: '10px', color: '#3D4F6E', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           마지막 업데이트 {formatTime(lastUpdate)}
         </div>
       </aside>
 
-      <div className="settings-page">
-        <div className="settings-mobile-top">
-          <div className="settings-mobile-logo">
-            <div className="settings-mobile-logo-icon">⚡</div>
-            <b>Clean-Sync</b>
-          </div>
-
-          <div className="settings-mobile-right">
-            <span className="settings-mobile-score">● {score}</span>
-            <button
-              className="settings-mobile-menu"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              {mobileMenuOpen ? "×" : "☰"}
-            </button>
-          </div>
-        </div>
-
-        {mobileMenuOpen && (
-          <div className="settings-mobile-menu-panel">
-            <NavLink
-              to="/home"
-              className={({ isActive }) =>
-                isActive
-                  ? "settings-mobile-menu-item active"
-                  : "settings-mobile-menu-item"
-              }
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <span></span>
-              <div>
-                <b>홈</b>
-                <p>현재 상태</p>
-              </div>
-            </NavLink>
-
-            <NavLink
-              to="/dashboard"
-              className={({ isActive }) =>
-                isActive
-                  ? "settings-mobile-menu-item active"
-                  : "settings-mobile-menu-item"
-              }
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <span></span>
-              <div>
-                <b>대시보드</b>
-                <p>실시간 센서</p>
-              </div>
-            </NavLink>
-
-            <NavLink
-              to="/analytics"
-              className={({ isActive }) =>
-                isActive
-                  ? "settings-mobile-menu-item active"
-                  : "settings-mobile-menu-item"
-              }
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <span></span>
-              <div>
-                <b>통계</b>
-                <p>기록 분석</p>
-              </div>
-            </NavLink>
-
-            <NavLink
-              to="/settings"
-              className={({ isActive }) =>
-                isActive
-                  ? "settings-mobile-menu-item active"
-                  : "settings-mobile-menu-item"
-              }
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <span></span>
-              <div>
-                <b>설정</b>
-                <p>환경 설정</p>
-              </div>
-            </NavLink>
-          </div>
-        )}
-
-        <div className="settings-header">
-          <h1>설정</h1>
-          <p>사용자 환경에 맞게 시스템을 맞춤 설정합니다</p>
-        </div>
-
-        {mobileSettingPage === null && (
-          <div className="mobile-settings-list">
-            <div
-              className="mobile-setting-row"
-              onClick={() => setMobileSettingPage("alarm")}
-            >
-              <div className="mobile-setting-left">
-                <div className="mobile-setting-icon">🔔</div>
-                <div className="mobile-setting-text">
-                  <b>알림 설정</b>
-                  <p>임계값 및 알림 채널</p>
-                </div>
-              </div>
-              <span>›</span>
-            </div>
-
-            <div
-              className="mobile-setting-row"
-              onClick={() => setMobileSettingPage("device")}
-            >
-              <div className="mobile-setting-left">
-                <div className="mobile-setting-icon">⚙️</div>
-                <div className="mobile-setting-text">
-                  <b>기기 관리</b>
-                  <p>센서 기기 등록/삭제</p>
-                </div>
-              </div>
-              <span>›</span>
-            </div>
-
-            <div
-              className="mobile-setting-row"
-              onClick={() => setMobileSettingPage("profile")}
-            >
-              <div className="mobile-setting-left">
-                <div className="mobile-setting-icon">👤</div>
-                <div className="mobile-setting-text">
-                  <b>프로필 수정</b>
-                  <p>계정 정보 관리</p>
-                </div>
-              </div>
-              <span>›</span>
+      <main style={{ flex: 1, position: 'relative', overflowY: 'auto', background: theme.bg, padding: '40px', boxSizing: 'border-box', transition: 'background 0.8s ease' }}>
+        <ParticleBg color={theme.color} />
+        <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          <div style={{ marginBottom: '32px' }}>
+            <h1 style={{ fontSize: '32px', fontWeight: '800', color: '#1A202C', margin: '0 0 20px 0' }}>설정</h1>
+            <div style={{ display: 'flex', gap: '20px', borderBottom: '1px solid #E2E8F0', marginBottom: '40px' }}>
+              <button onClick={() => setActiveTab('alarm')} style={{ padding: '10px 0', border: 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'alarm' ? '700' : '500', color: activeTab === 'alarm' ? theme.color : '#64748B', borderBottom: activeTab === 'alarm' ? `2px solid ${theme.color}` : 'none', transition: 'all 0.2s' }}>알림 설정</button>
+              <button onClick={() => setActiveTab('device')} style={{ padding: '10px 0', border: 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'device' ? '700' : '500', color: activeTab === 'device' ? theme.color : '#64748B', borderBottom: activeTab === 'device' ? `2px solid ${theme.color}` : 'none', transition: 'all 0.2s' }}>기기 관리</button>
+              <button onClick={() => setActiveTab('profile')} style={{ padding: '10px 0', border: 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'profile' ? '700' : '500', color: activeTab === 'profile' ? theme.color : '#64748B', borderBottom: activeTab === 'profile' ? `2px solid ${theme.color}` : 'none', transition: 'all 0.2s' }}>프로필 정보</button>
             </div>
           </div>
-        )}
-
-        <div
-          className={
-            mobileSettingPage === null
-              ? "settings-layout mobile-detail-hidden"
-              : "settings-layout"
-          }
-        >
-          <div className="settings-side-menu">
-            <button
-              className={
-                settingTab === "alarm" ? "settings-tab active" : "settings-tab"
-              }
-              onClick={() => setSettingTab("alarm")}
-            >
-              알림 설정
-              <span>임계값 및 알림 채널</span>
-            </button>
-
-            <button
-              className={
-                settingTab === "device" ? "settings-tab active" : "settings-tab"
-              }
-              onClick={() => setSettingTab("device")}
-            >
-              기기 관리
-              <span>센서 기기 등록/삭제</span>
-            </button>
-
-            <button
-              className={
-                settingTab === "profile"
-                  ? "settings-tab active"
-                  : "settings-tab"
-              }
-              onClick={() => setSettingTab("profile")}
-            >
-              프로필 수정
-              <span>계정 정보 관리</span>
-            </button>
-          </div>
-
-          <div className="settings-content">
-            {mobileSettingPage && (
-              <button
-                className="mobile-back"
-                onClick={() => setMobileSettingPage(null)}
-              >
-                ‹{" "}
-                {activeSetting === "alarm"
-                  ? "알림 설정"
-                  : activeSetting === "device"
-                  ? "기기 관리"
-                  : "프로필 수정"}
-              </button>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
+            {activeTab === 'alarm' && (
+              <div style={{ padding: '20px 0', display: 'flex', flexDirection: 'column', gap: '60px' }}>
+                <AlarmTab settings={settings} handleSettingChange={handleSettingChange} saveSettings={saveSettings} isLocked={isLocked}/>
+              </div>
             )}
-
-            {activeSetting === "alarm" && (
-              <>
-                <section className="settings-section">
-                  <h2>알림 설정</h2>
-                  <h3 className="left-title">알림 채널</h3>
-                  <p className="settings-desc">알림을 받을 방법을 선택하세요</p>
-
-                  <div className="settings-card">
-                    <div className="setting-row">
-                      <div>
-                        <b>이메일 알림</b>
-                        <p>임계값 초과 시 이메일로 알림을 받습니다</p>
-                      </div>
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={settings.emailAlert}
-                          onChange={(e) =>
-                            handleSettingChange("emailAlert", e.target.checked)
-                          }
-                        />
-                        <span className="slider"></span>
-                      </label>
-                    </div>
-
-                    <div className="setting-row">
-                      <div>
-                        <b>푸시 알림</b>
-                        <p>모바일 앱 푸시 알림을 받습니다</p>
-                      </div>
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={settings.pushAlert}
-                          onChange={(e) =>
-                            handleSettingChange("pushAlert", e.target.checked)
-                          }
-                        />
-                        <span className="slider"></span>
-                      </label>
-                    </div>
-
-                    <div className="setting-row">
-                      <div>
-                        <b>일일 리포트</b>
-                        <p>매일 오전 9시 일일 환경 리포트를 받습니다</p>
-                      </div>
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={settings.dailyReport}
-                          onChange={(e) =>
-                            handleSettingChange("dailyReport", e.target.checked)
-                          }
-                        />
-                        <span className="slider"></span>
-                      </label>
-                    </div>
-
-                    <div className="setting-row">
-                      <div>
-                        <b>주간 리포트</b>
-                        <p>매주 월요일 주간 분석 리포트를 받습니다</p>
-                      </div>
-                      <label className="switch">
-                        <input
-                          type="checkbox"
-                          checked={settings.weeklyReport}
-                          onChange={(e) =>
-                            handleSettingChange(
-                              "weeklyReport",
-                              e.target.checked
-                            )
-                          }
-                        />
-                        <span className="slider"></span>
-                      </label>
-                    </div>
-                  </div>
-                </section>
-
-                <section className="settings-section">
-                  <h3 className="left-title">임계값 설정</h3>
-                  <p className="settings-desc">
-                    이 수치를 초과하면 알림이 발송됩니다
-                  </p>
-
-                  <div className="settings-card threshold-card">
-                    <div className="threshold-item">
-                      <div className="threshold-top">
-                        <b>CO₂ 임계값</b>
-                        <span>주의 범위 1000 ppm</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="400"
-                        max="2000"
-                        step="1"
-                        value={settings.co2}
-                        onChange={(e) =>
-                          handleSettingChange("co2", Number(e.target.value))
-                        }
-                      />
-                      <div className="threshold-labels">
-                        <span>400 ppm</span>
-                        <span>양호 ≤800</span>
-                        <span>주의 ≤1000</span>
-                        <span>2000 ppm</span>
-                      </div>
-                    </div>
-
-                    <div className="threshold-item">
-                      <div className="threshold-top">
-                        <b>소음 임계값</b>
-                        <span>주의 범위 55 dB</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="20"
-                        max="90"
-                        step="1"
-                        value={settings.noise}
-                        onChange={(e) =>
-                          handleSettingChange("noise", Number(e.target.value))
-                        }
-                      />
-                      <div className="threshold-labels">
-                        <span>20 dB</span>
-                        <span>양호 ≤45</span>
-                        <span>주의 ≤55</span>
-                        <span>90 dB</span>
-                      </div>
-                    </div>
-
-                    <div className="threshold-item">
-                      <div className="threshold-top">
-                        <b>최고 온도 임계값</b>
-                        <span>주의 범위 27 ℃</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="20"
-                        max="35"
-                        step="1"
-                        value={settings.temp}
-                        onChange={(e) =>
-                          handleSettingChange("temp", Number(e.target.value))
-                        }
-                      />
-                      <div className="threshold-labels">
-                        <span>20 ℃</span>
-                        <span>양호 ≤24</span>
-                        <span>주의 ≤27</span>
-                        <span>35 ℃</span>
-                      </div>
-                    </div>
-
-                    <div className="threshold-item">
-                      <div className="threshold-top">
-                        <b>미세먼지 임계값</b>
-                        <span>주의 범위 35 µg/m³</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="150"
-                        step="1"
-                        value={settings.dust}
-                        onChange={(e) =>
-                          handleSettingChange("dust", Number(e.target.value))
-                        }
-                      />
-                      <div className="threshold-labels">
-                        <span>0 µg/m³</span>
-                        <span>양호 ≤15</span>
-                        <span>주의 ≤35</span>
-                        <span>150 µg/m³</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button className="save-setting-btn" onClick={saveSettings}>
-                    설정 저장
-                  </button>
-                </section>
-              </>
+            {activeTab === 'device' && (
+              <DeviceTab 
+                devices={devices} 
+                deleteDevice={deleteDevice} 
+                showDeviceModal={showDeviceModal} 
+                setShowDeviceModal={setShowDeviceModal} 
+                newDevice={newDevice} 
+                setNewDevice={setNewDevice} 
+                addDevice={addDevice} 
+                toggleDeviceStatus={toggleDeviceStatus} 
+              />
             )}
-
-            {activeSetting === "device" && (
-              <section className="settings-section">
-                <h2>등록된 기기</h2>
-                <p className="settings-desc">현재 연결된 센서 기기 목록입니다</p>
-
-                <div className="settings-card">
-                  {devices.map((device) => (
-                    <div className="setting-row device-row" key={device.id}>
-                      <div>
-                        <b>{device.name}</b>
-                        <p>
-                          {device.location} · {device.time}
-                        </p>
-                      </div>
-
-                      <div className="device-actions">
-                        <span
-                          className={
-                            device.status === "연결됨"
-                              ? "device-status good-text"
-                              : "device-status offline-text"
-                          }
-                        >
-                          {device.status}
-                        </span>
-
-                        <button
-                          className="delete-device-btn"
-                          onClick={() => deleteDevice(device.id)}
-                        >
-                          삭제
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  className="save-setting-btn add-device-btn"
-                  onClick={() => setShowDeviceModal(true)}
-                >
-                  ＋ 새 기기 추가
-                </button>
-
-                {showDeviceModal && (
-                  <div className="device-modal-bg">
-                    <div className="device-modal">
-                      <h3>새 기기 추가</h3>
-                      <p>추가할 센서 기기 정보를 입력하세요.</p>
-
-                      <label>
-                        기기 이름
-                        <input
-                          type="text"
-                          placeholder="예: 강의실 센서"
-                          value={newDevice.name}
-                          onChange={(e) =>
-                            setNewDevice({
-                              ...newDevice,
-                              name: e.target.value,
-                            })
-                          }
-                        />
-                      </label>
-
-                      <label>
-                        설치 위치
-                        <input
-                          type="text"
-                          placeholder="예: 3층 301호"
-                          value={newDevice.location}
-                          onChange={(e) =>
-                            setNewDevice({
-                              ...newDevice,
-                              location: e.target.value,
-                            })
-                          }
-                        />
-                      </label>
-
-                      <div className="device-modal-buttons">
-                        <button
-                          className="cancel-device-btn"
-                          onClick={() => setShowDeviceModal(false)}
-                        >
-                          취소
-                        </button>
-
-                        <button
-                          className="confirm-device-btn"
-                          onClick={addDevice}
-                        >
-                          추가
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </section>
-            )}
-
-            {activeSetting === "profile" && (
-              <section className="settings-section">
-                <h2>프로필 정보</h2>
-                <p className="settings-desc">계정 정보를 수정합니다</p>
-
-                <div className="settings-card profile-card">
-                  <label>
-                    이름
-                    <input
-                      type="text"
-                      value={profile.name}
-                      onChange={(e) =>
-                        handleProfileChange("name", e.target.value)
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    이메일
-                    <input
-                      type="email"
-                      value={profile.email}
-                      onChange={(e) =>
-                        handleProfileChange("email", e.target.value)
-                      }
-                    />
-                  </label>
-
-                  <label>
-                    주 사용 공간
-                    <input
-                      type="text"
-                      value={profile.space}
-                      onChange={(e) =>
-                        handleProfileChange("space", e.target.value)
-                      }
-                    />
-                  </label>
-                </div>
-
-                <button className="save-setting-btn" onClick={saveProfile}>
-                  프로필 저장
-                </button>
-              </section>
-            )}
+            {activeTab === 'profile' && <ProfileTab profile={profile} handleProfileChange={handleProfileChange} saveProfile={saveProfile} isLocked={isLocked} />}
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
-}
+};
 
 export default SettingsPage;

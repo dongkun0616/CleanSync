@@ -14,7 +14,9 @@ import HomeMobPage from "./HomeMobPage";
 import DashboardPage from "./DashboardPage";
 import DashboardMobPage from "./DashboardMobPage";
 import AnalyticsPage from "./AnalyticsPage";
+import AnalyticsMobPage from "./AnalyticsMobPage"; // 추가된 import
 import SettingsPage from "./SettingsPage";
+import SettingsMobPage from "./SettingsMobPage";
 
 function AppLayout({ isMobile }) {
   return (
@@ -80,9 +82,13 @@ function AppLayout({ isMobile }) {
             element={isMobile ? <DashboardMobPage /> : <DashboardPage />}
           />
 
-          <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route
+            path="/analytics"
+            element={isMobile ? <AnalyticsMobPage /> : <AnalyticsPage />}
+          />
 
-          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/settings" element={isMobile ? <SettingsMobPage /> : <SettingsPage />}
+/>
 
           <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
