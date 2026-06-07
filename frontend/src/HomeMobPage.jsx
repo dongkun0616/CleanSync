@@ -156,7 +156,7 @@ const HomeMobPage = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }} onClick={() => setIsMenuOpen(true)}>
-          <span style={{ fontWeight: '700', color: theme.color, fontFamily: "'DM Mono', monospace" }}>
+          <span style={{ fontWeight: '700', color: theme.color}}>
             {isDeviceConnected ? `● ${sensorData.score}` : '○ Offline'}
           </span>
           <span style={{ fontSize: '24px' }}>☰</span>
@@ -172,7 +172,7 @@ const HomeMobPage = () => {
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ fontSize: '15px', color: '#64748B' }}>학습 지수</div>
-          <div style={{ fontSize: '72px', fontWeight: '800', color: theme.color, margin: '8px 0', lineHeight: '1', fontFamily: "'DM Mono', monospace" }}>
+          <div style={{ fontSize: '72px', fontWeight: '800', color: theme.color, margin: '8px 0', lineHeight: '1'}}>
             {isDeviceConnected ? sensorData.score : '--'}
           </div>
           <div style={{ fontSize: '20px', fontWeight: '800' }}>

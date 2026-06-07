@@ -354,7 +354,7 @@ const HomePage = () => {
             <span style={{ fontSize: '14px', color: '#4A5568' }}>/ 100</span>
           </div>
           <div style={{ fontSize: '14px', color: theme.color, fontWeight: '700', marginTop: '8px' }}>
-            {isDeviceConnected ? sensorData.statusText : '기기 연결이 해제되었습니다.'}
+            {isDeviceConnected ? sensorData.statusText : '기기 연결 끊김'}
           </div>
         </div>
 

@@ -195,7 +195,7 @@ const DashboardMobPage = () => {
                   <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '4px' }}>{s.label}</div>
                   <div style={{ fontSize: '20px', fontWeight: '800', color: '#161C2D', fontFamily: "'DM Mono', monospace" }}>
                     {s.val}
-                    <span style={{ fontSize: '11px', color: '#94A3B8', marginLeft: '2px', fontFamily: "'Pretendard', sans-serif" }}>{s.unit}</span>
+                    <span style={{ fontSize: '11px', color: '#94A3B8', marginLeft: '2px', fontFamily: "'DM Mono', monospace"  }}>{s.unit}</span>
                   </div>
                   <GaugeBar value={s.val} min={s.range[0]} max={s.range[1]} color={status.color} />
                 </div>
