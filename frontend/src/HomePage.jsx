@@ -244,7 +244,7 @@ const HomePage = () => {
     try {
       // 1. 프로필 정보 불러오기
       const initialUserName = 'dongdong'; 
-      const settingsRes = await fetch(`${process.env.REACT_APP_API_URL}/settings/profile?userName=${initialUserName}`);
+      const settingsRes = await fetch(`${import.meta.env.VITE_API_URL}/settings/profile?userName=${initialUserName}`);
       const settingsResult = await settingsRes.json();
       
       let userSpace = '동아리방'; // 기본값
@@ -253,7 +253,7 @@ const HomePage = () => {
       }
 
       // 2. 주 사용공간을 포함하여 홈 데이터 요청
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/home?location=${encodeURIComponent(userSpace)}`);
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/home?location=${encodeURIComponent(userSpace)}`);
       const result = await response.json();
 
       if (result && result.success && result.data) {

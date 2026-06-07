@@ -75,13 +75,13 @@ const AnalyticsPage = () => {
       try {
         const initialUserName = 'dongdong';
         
-        // 1. 프로필 정보와 기기 연결 상태 주소를 환경변수(REACT_APP_API_URL)로 교체합니다.
+        // 1. 프로필 정보와 기기 연결 상태 주소를 Vite 환경변수(import.meta.env.VITE_API_URL)로 교체 완료
         const [profileRes, deviceRes] = await Promise.all([
-          axios.get(`${process.env.REACT_APP_API_URL}/settings/profile?userName=${initialUserName}`),
-          axios.get(`${process.env.REACT_APP_API_URL}/settings/devices?userName=${initialUserName}`)
+          axios.get(`${import.meta.env.VITE_API_URL}/settings/profile?userName=${initialUserName}`),
+          axios.get(`${import.meta.env.VITE_API_URL}/settings/devices?userName=${initialUserName}`)
         ]);
         
-        // 🚨 기기 연결이 끊겨있으면 여기서 바로 차단!
+        // 기기 연결이 끊겨있으면 여기서 바로 차단!
         if (deviceRes.data?.data?.deviceStatus !== '연결됨') {
           setIsConnected(false);
           return;
@@ -93,8 +93,8 @@ const AnalyticsPage = () => {
         const rangeMap = { '1시간': '1h', '6시간': '6h', '12시간': '12h', '24시간': '24h' };
         const range = rangeMap[timeFilter] || '6h';
         
-        // 2. 통계 데이터 요청 주소도 환경변수(REACT_APP_API_URL)로 교체합니다.
-        const url = `${process.env.REACT_APP_API_URL}/analytics?range=${range}&location=${encodeURIComponent(userSpace)}`;
+        // 2. 통계 데이터 요청 주소도 Vite 환경변수(import.meta.env.VITE_API_URL)로 교체 완료
+        const url = `${import.meta.env.VITE_API_URL}/analytics?range=${range}&location=${encodeURIComponent(userSpace)}`;
         const res = await axios.get(url);
         
         if (res.data && res.data.success && res.data.data) {
@@ -213,7 +213,7 @@ const AnalyticsPage = () => {
       <main style={{ flex: 1, position: 'relative', overflowY: 'auto', background: theme.bg, transition: 'background 0.8s ease', display: 'flex', flexDirection: 'column', padding: '40px 48px' }}>
         <ParticleBg color={theme.color} />
         
-        {/* 🚨 기기 연결 끊김 시 홈 화면과 동일한 디자인 적용 */}
+        {/* 기기 연결 끊김 시 홈 화면과 동일한 디자인 적용 */}
         {!isConnected ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>
             <h2 style={{ fontSize: '32px', color: '#475569', marginBottom: '16px', fontWeight: '800' }}>현재 기기가 연결되어 있지 않습니다.</h2>

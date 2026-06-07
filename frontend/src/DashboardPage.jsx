@@ -129,9 +129,10 @@ const DashboardPage = () => {
 
     const fetchData = async () => {
       try {
-        // HomePage.jsx와 동일한 로직 적용
         const initialUserName = 'dongdong'; 
-        const settingsRes = await fetch(`${process.env.REACT_APP_API_URL}/settings/profile?userName=${initialUserName}`, { signal: controller.signal });
+        
+        // 1. Vite 환경변수(import.meta.env.VITE_API_URL) 적용하여 프로필 요청
+        const settingsRes = await fetch(`${import.meta.env.VITE_API_URL}/settings/profile?userName=${initialUserName}`, { signal: controller.signal });
         const settingsResult = await settingsRes.json();
         
         let userSpace = '동아리방'; 
@@ -139,7 +140,8 @@ const DashboardPage = () => {
           userSpace = settingsResult.data.userSpace;
         }
 
-        const deviceRes = await fetch(`${process.env.REACT_APP_API_URL}/settings/devices?userName=${initialUserName}`, { signal: controller.signal });
+        // 2. Vite 환경변수 적용하여 디바이스 상태 요청
+        const deviceRes = await fetch(`${import.meta.env.VITE_API_URL}/settings/devices?userName=${initialUserName}`, { signal: controller.signal });
         const deviceResult = await deviceRes.json();
         
         // 기기가 '연결됨' 상태인지 확인
@@ -148,7 +150,8 @@ const DashboardPage = () => {
           return;
         }
 
-        const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard?location=${encodeURIComponent(userSpace)}`, { signal: controller.signal });
+        // 3. Vite 환경변수 적용하여 대시보드 데이터 요청
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/dashboard?location=${encodeURIComponent(userSpace)}`, { signal: controller.signal });
         const result = await response.json();
         
         if (result && result.success && result.data) {
@@ -161,7 +164,7 @@ const DashboardPage = () => {
             setSensorData({
               score: scaledScore,
               displayScore: rawScore,
-              statusLevel: current.statusLevel || '알 수 없음', // statusText 대신 statusLevel 적용
+              statusLevel: current.statusLevel || '알 수 없음', 
               co2: Number(current.co2 || 0),
               noise: Number(current.noise || 0),
               temperature: Number(current.temperature || 0),
