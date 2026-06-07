@@ -31,16 +31,16 @@ const DashboardMobPage = () => {
     try {
       const initialUserName = 'dongdong';
       
-      // 1. 환경변수(REACT_APP_API_URL) 적용하여 프로필 정보와 기기 상태를 같이 불러옵니다.
+      // 1. Vite 환경변수(import.meta.env.VITE_API_URL) 적용하여 프로필 정보와 기기 상태를 불러옵니다.
       const [profileRes, deviceRes] = await Promise.all([
-        fetch(`${process.env.REACT_APP_API_URL}/settings/profile?userName=${initialUserName}`),
-        fetch(`${process.env.REACT_APP_API_URL}/settings/devices?userName=${initialUserName}`)
+        fetch(`${import.meta.env.VITE_API_URL}/settings/profile?userName=${initialUserName}`),
+        fetch(`${import.meta.env.VITE_API_URL}/settings/devices?userName=${initialUserName}`)
       ]);
       
       const profileResult = await profileRes.json();
       const deviceResult = await deviceRes.json();
 
-      // 🚨 기기 연결이 끊겨있으면 차단!
+      // 기기 연결이 끊겨있으면 차단!
       if (deviceResult?.data?.deviceStatus !== '연결됨') {
         setIsConnected(false);
         return;
@@ -48,8 +48,8 @@ const DashboardMobPage = () => {
       
       let userSpace = profileResult?.data?.userSpace || '동아리방';
 
-      // 2. 환경변수 적용 및 공간 파라미터 전송
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/dashboard?location=${encodeURIComponent(userSpace)}`);
+      // 2. Vite 환경변수 적용 및 공간 파라미터 전송
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/dashboard?location=${encodeURIComponent(userSpace)}`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const result = await response.json();
@@ -127,7 +127,7 @@ const DashboardMobPage = () => {
     <div style={{ width: '100vw', minHeight: '100vh', backgroundColor: '#FFFFFF', paddingBottom: '20px', fontFamily: "'Pretendard', sans-serif", position: 'relative', overflowX: 'hidden' }}>
       <style>{`
         @import url('https://webfontworld.github.io/pretendard/Pretendard.css');
-        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght=400;500&display=swap');
         * { font-family: 'Pretendard', sans-serif; box-sizing: border-box; }
       `}</style>
 
