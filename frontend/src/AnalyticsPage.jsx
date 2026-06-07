@@ -186,7 +186,7 @@ const AnalyticsPage = () => {
 
   return (
     <div style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', display: 'flex', boxSizing: 'border-box' }}>
-      <style>{`@import url('https://webfontworld.github.io/pretendard/Pretendard.css'); @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght=400;500;700&display=swap'); * { font-family: 'Pretendard', sans-serif; box-sizing: border-box; }`}</style>
+      <style>{`@import url('https://webfontworld.github.io/pretendard/Pretendard.css'); @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;700&display=swap'); * { font-family: 'Pretendard', sans-serif; box-sizing: border-box; }`}</style>
       <aside style={{ width: '230px', minWidth: '230px', height: '100%', background: 'linear-gradient(180deg, #0F1623 0%, #161C2D 100%)', color: '#FFF', padding: '28px 20px', display: 'flex', flexDirection: 'column', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
           <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: `linear-gradient(135deg, ${theme.color}, ${theme.color}88)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', boxShadow: `0 4px 12px ${theme.color}44` }}>⚡</div>
