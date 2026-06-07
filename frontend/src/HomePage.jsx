@@ -215,6 +215,7 @@ const HomePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [isDeviceConnected, setIsDeviceConnected] = useState(false);
   const [sensorData, setSensorData] = useState({
     score: 0,
     statusText: '로딩 중...',
@@ -228,16 +229,9 @@ const HomePage = () => {
   });
   const [lastUpdate, setLastUpdate] = useState(null);
 
-  // 브라우저 확대/축소 방지
   useEffect(() => {
-    const handleWheel = (e) => {
-      if (e.ctrlKey || e.metaKey) e.preventDefault();
-    };
-    const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '0')) {
-        e.preventDefault();
-      }
-    };
+    const handleWheel = (e) => { if (e.ctrlKey || e.metaKey) e.preventDefault(); };
+    const handleKeyDown = (e) => { if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '0')) e.preventDefault(); };
     window.addEventListener('wheel', handleWheel, { passive: false });
     window.addEventListener('keydown', handleKeyDown);
     return () => {
@@ -248,26 +242,35 @@ const HomePage = () => {
 
   const fetchData = async () => {
     try {
-      const response = await fetch('/api/home');
+      const locationName = '동아리방'; 
+      const response = await fetch(`http://localhost:5000/home?location=${locationName}`);
       const result = await response.json();
 
       if (result && result.success && result.data) {
         const d = result.data;
+        // 이제 백엔드가 기기 삭제 여부를 판별해서 deviceStatus를 주므로 정상 작동합니다!
+        const connected = d.deviceStatus === '연결됨'; 
+        
+        setIsDeviceConnected(connected); 
+
         setSensorData({
-          score: Number(d.score || 0),
-          statusText: d.statusText || '알 수 없음',
-          aiMessage: d.aiMessage || '분석 중인 데이터가 없습니다.',
-          temperature: Number(d.temperature || 0),
-          humidity: Number(d.humidity || 0),
-          co2: Number(d.co2 || 0),
-          noise: Number(d.noise || 0),
-          dustPm10: Number(d.dustPm10 || 0),
-          dustPm25: Number(d.dustPm25 || 0),
+            score: Number(d.score || 0),
+            statusText: d.statusText || '알 수 없음',
+            aiMessage: d.aiMessage || '분석 중인 데이터가 없습니다.',
+            temperature: Number(d.temperature || 0),
+            humidity: Number(d.humidity || 0),
+            co2: Number(d.co2 || 0),
+            noise: Number(d.noise || 0),
+            dustPm10: Number(d.dustPm10 || 0),
+            dustPm25: Number(d.dustPm25 || 0),
         });
         setLastUpdate(new Date());
+      } else {
+        setIsDeviceConnected(false);
       }
     } catch (error) {
       console.error('데이터 통신 오류:', error);
+      setIsDeviceConnected(false);
     }
   };
 
@@ -277,12 +280,13 @@ const HomePage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const getTheme = (score) => {
+  const getTheme = (score, isConnected) => {
+    if (!isConnected) return { color: '#94A3B8', bg: 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)' };
     if (score >= 80) return { color: '#10B981', bg: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)' };
     if (score >= 60) return { color: '#F59E0B', bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
     return { color: '#EF4444', bg: 'linear-gradient(135deg, #FEE2E2 0%, #FFF5F5 100%)' };
   };
-  const theme = getTheme(sensorData.score);
+  const theme = getTheme(sensorData.score, isDeviceConnected);
 
   const formatTime = (d) => d
     ? `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`
@@ -327,58 +331,48 @@ const HomePage = () => {
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <span style={{ fontSize: '12px', color: '#6B7A99', fontWeight: '600' }}>학습 지수</span>
-            <span style={{ fontSize: '11px', color: '#10B981', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} />
-              LIVE
+            <span style={{ fontSize: '11px', color: isDeviceConnected ? '#10B981' : '#94A3B8', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isDeviceConnected ? '#10B981' : '#94A3B8', display: 'inline-block' }} />
+              {isDeviceConnected ? 'LIVE' : 'OFFLINE'}
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
             <span style={{ fontSize: '48px', fontWeight: '800', color: theme.color, lineHeight: 1, fontFamily: "'DM Mono', monospace", transition: 'all 0.5s ease' }}>
-              {sensorData.score}
+              {isDeviceConnected ? sensorData.score : '--'}
             </span>
             <span style={{ fontSize: '14px', color: '#4A5568' }}>/ 100</span>
           </div>
           <div style={{ fontSize: '14px', color: theme.color, fontWeight: '700', marginTop: '8px' }}>
-            {sensorData.statusText}
+            {isDeviceConnected ? sensorData.statusText : '기기 연결이 해제되었습니다.'}
           </div>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}> {/* gap을 조절하여 간격을 넓혔습니다 */}
-  {[
-    { label: '홈', sub: '현재 상태', path: '/' },
-    { label: '대시보드', sub: '실시간 센서', path: '/dashboard' },
-    { label: '통계', sub: '기록 분석', path: '/analytics' },
-    { label: '설정', sub: '환경 설정', path: '/settings' },
-  ].map(({ label, sub, path }) => {
-    const isActive = location.pathname === path;
-    return (
-      <div 
-        key={label} 
-        onClick={() => navigate(path)} 
-        style={{ 
-          display: 'flex', 
-          flexDirection: 'column', // 세로 정렬로 변경
-          alignItems: 'center',    // 가로축 가운데 정렬
-          justifyContent: 'center',
-          padding: '12px 14px', 
-          borderRadius: '10px', 
-          cursor: 'pointer', 
-          background: isActive ? `linear-gradient(90deg, ${theme.color}22, transparent)` : 'transparent', 
-          borderLeft: isActive ? `3px solid ${theme.color}` : '3px solid transparent', 
-          transition: 'all 0.2s ease',
-          textAlign: 'center'      // 텍스트 가운데 정렬
-        }}
-      >
-        <div style={{ fontSize: '13px', fontWeight: isActive ? '700' : '500', color: isActive ? '#FFF' : '#6B7A99' }}>
-          {label}
-        </div>
-        <div style={{ fontSize: '10px', color: '#4A5568', marginTop: '4px' }}>
-          {sub}
-        </div>
-      </div>
-    );
-  })}
-</nav>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+          {[
+            { label: '홈', sub: '현재 상태', path: '/' },
+            { label: '대시보드', sub: '실시간 센서', path: '/dashboard' },
+            { label: '통계', sub: '기록 분석', path: '/analytics' },
+            { label: '설정', sub: '환경 설정', path: '/settings' },
+          ].map(({ label, sub, path }) => {
+            const isActive = location.pathname === path;
+            return (
+              <div 
+                key={label} 
+                onClick={() => navigate(path)} 
+                style={{ 
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  padding: '12px 14px', borderRadius: '10px', cursor: 'pointer', 
+                  background: isActive ? `linear-gradient(90deg, ${theme.color}22, transparent)` : 'transparent', 
+                  borderLeft: isActive ? `3px solid ${theme.color}` : '3px solid transparent', 
+                  transition: 'all 0.2s ease', textAlign: 'center'
+                }}
+              >
+                <div style={{ fontSize: '13px', fontWeight: isActive ? '700' : '500', color: isActive ? '#FFF' : '#6B7A99' }}>{label}</div>
+                <div style={{ fontSize: '10px', color: '#4A5568', marginTop: '4px' }}>{sub}</div>
+              </div>
+            );
+          })}
+        </nav>
 
         <div style={{ fontSize: '10px', color: '#3D4F6E', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           마지막 업데이트 {formatTime(lastUpdate)}
@@ -390,62 +384,72 @@ const HomePage = () => {
         background: theme.bg, transition: 'background 0.8s ease',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         gap: '48px', padding: '40px',
+        boxSizing: 'border-box',
       }}>
         <ParticleBg color={theme.color} />
 
-        <div style={{ position: 'relative', zIndex: 1, flexShrink: 0, width: '340px' }}>
-          <ArcGauge score={sensorData.score} color={theme.color} />
-        </div>
-
-        <div style={{ position: 'relative', zIndex: 1, width: '440px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{
-            backgroundColor: 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(16px)',
-            borderRadius: '20px', padding: '22px 26px',
-            border: '1px solid rgba(255,255,255,0.7)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: theme.color, display: 'inline-block' }} />
-              <span style={{ fontSize: '12px', color: '#8FA3B1', fontWeight: '600', letterSpacing: '0.5px' }}>현재 상태</span>
-            </div>
-            <div style={{ fontSize: '30px', fontWeight: '800', color: '#1A202C', marginBottom: '6px', letterSpacing: '-0.5px' }}>
-              {sensorData.statusText}
-            </div>
-            <div style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.6 }}>
-              학습 지수&nbsp;
-              <strong style={{ color: theme.color }}>{sensorData.score}점</strong>
-              &nbsp;으로 현재 환경이&nbsp;
-              <strong style={{ color: theme.color }}>{sensorData.statusText}</strong>
-              &nbsp;상태입니다.
-            </div>
+        {!isDeviceConnected ? (
+          <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+            <h2 style={{ fontSize: '32px', color: '#475569', marginBottom: '16px' }}>현재 기기가 연결되어 있지 않습니다.</h2>
+            <p style={{ color: '#64748B', fontSize: '16px' }}>설정 페이지에서 기기 연결 상태를 다시 확인해주세요.</p>
           </div>
-
-          <div style={{
-            backgroundColor: 'rgba(255,255,255,0.85)',
-            backdropFilter: 'blur(16px)',
-            borderRadius: '20px', padding: '22px 26px',
-            border: '1px solid rgba(255,255,255,0.7)',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-              <img src="/ai-icon.png" style={{ width: '22px', height: '22px' }} alt="AI" />
-              <span style={{ fontSize: '12px', color: '#8FA3B1', fontWeight: '600', letterSpacing: '0.5px' }}>AI 가이드</span>
+        ) : (
+          <>
+            <div style={{ position: 'relative', zIndex: 1, flexShrink: 0, width: '340px' }}>
+              <ArcGauge score={sensorData.score} color={theme.color} />
             </div>
-            <div style={{ fontSize: '14px', color: '#4A5568', lineHeight: 1.7 }}>
-              {sensorData.aiMessage}
-            </div>
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <SensorCard icon={<img src="/temp-icon.png" style={iconStyle} />} iconSize="70px" label="온도" value={sensorData.temperature} unit="°C" color={theme.color} />
-            <SensorCard icon={<img src="/hum-icon.png" style={iconStyle} />} iconSize="70px" label="습도" value={sensorData.humidity} unit="%" color={theme.color} />
-            <SensorCard icon={<img src="/co2-icon.png" style={iconStyle} />} label="이산화탄소(CO₂)" value={sensorData.co2} unit="ppm" color={theme.color} />
-            <SensorCard icon={<img src="/noise-icon.png" style={iconStyle} />} label="소음" value={sensorData.noise} unit="dB" color={theme.color} />
-            <SensorCard icon={<img src="/dust-icon.png" style={iconStyle} />} label="미세먼지(PM10)" value={sensorData.dustPm10} unit="㎍/㎥" color={theme.color} />
-            <SensorCard icon={<img src="/dustpm-icon.png" style={iconStyle} />} label="초미세먼지(PM2.5)" value={sensorData.dustPm25} unit="㎍/㎥" color={theme.color} />
-          </div>
-        </div>
+            <div style={{ position: 'relative', zIndex: 1, width: '440px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{
+                backgroundColor: 'rgba(255,255,255,0.85)',
+                backdropFilter: 'blur(16px)',
+                borderRadius: '20px', padding: '22px 26px',
+                border: '1px solid rgba(255,255,255,0.7)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: theme.color, display: 'inline-block' }} />
+                  <span style={{ fontSize: '12px', color: '#8FA3B1', fontWeight: '600', letterSpacing: '0.5px' }}>현재 상태</span>
+                </div>
+                <div style={{ fontSize: '30px', fontWeight: '800', color: '#1A202C', marginBottom: '6px', letterSpacing: '-0.5px' }}>
+                  {sensorData.statusText}
+                </div>
+                <div style={{ fontSize: '14px', color: '#64748B', lineHeight: 1.6 }}>
+                  학습 지수&nbsp;
+                  <strong style={{ color: theme.color }}>{sensorData.score}점</strong>
+                  &nbsp;으로 현재 환경이&nbsp;
+                  <strong style={{ color: theme.color }}>{sensorData.statusText}</strong>
+                  &nbsp;상태입니다.
+                </div>
+              </div>
+
+              <div style={{
+                backgroundColor: 'rgba(255,255,255,0.85)',
+                backdropFilter: 'blur(16px)',
+                borderRadius: '20px', padding: '22px 26px',
+                border: '1px solid rgba(255,255,255,0.7)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <img src="/ai-icon.png" style={{ width: '22px', height: '22px' }} alt="AI" />
+                  <span style={{ fontSize: '12px', color: '#8FA3B1', fontWeight: '600', letterSpacing: '0.5px' }}>AI 가이드</span>
+                </div>
+                <div style={{ fontSize: '14px', color: '#4A5568', lineHeight: 1.7 }}>
+                  {sensorData.aiMessage}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <SensorCard icon={<img src="/temp-icon.png" style={iconStyle} />} iconSize="70px" label="온도" value={sensorData.temperature} unit="°C" color={theme.color} />
+                <SensorCard icon={<img src="/hum-icon.png" style={iconStyle} />} iconSize="70px" label="습도" value={sensorData.humidity} unit="%" color={theme.color} />
+                <SensorCard icon={<img src="/co2-icon.png" style={iconStyle} />} label="이산화탄소(CO₂)" value={sensorData.co2} unit="ppm" color={theme.color} />
+                <SensorCard icon={<img src="/noise-icon.png" style={iconStyle} />} label="소음" value={sensorData.noise} unit="dB" color={theme.color} />
+                <SensorCard icon={<img src="/dust-icon.png" style={iconStyle} />} label="미세먼지(PM10)" value={sensorData.dustPm10} unit="㎍/㎥" color={theme.color} />
+                <SensorCard icon={<img src="/dustpm-icon.png" style={iconStyle} />} label="초미세먼지(PM2.5)" value={sensorData.dustPm25} unit="㎍/㎥" color={theme.color} />
+              </div>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

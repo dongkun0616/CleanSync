@@ -7,7 +7,7 @@ require("dotenv").config();
 
 const app = express();
 
-app.use(cors({ origin: "*", methods: ["GET", "POST", "PUT"] }));
+app.use(cors({ origin: "*", methods: ["GET", "POST", "PUT", "DELETE"] }));
 app.use(express.json());
 
 function saveLog(message) {
@@ -39,59 +39,111 @@ app.get("/", (req, res) => {
   res.send("서버 정상 작동 중입니다. /home, /dashboard, /analytics, /settings 로 접속하세요.");
 });
 
-// ================== 메인 홈 API ==================
+// ================== 메인 홈 API (기기 관리 테이블 연동 버전) ==================
 app.get("/home", (req, res) => {
-  const sql = `
-    SELECT *
-    FROM home_status
-    ORDER BY CREATE_AT DESC
+  const { location } = req.query; // 프론트엔드에서 보낸 location (예: '동아리방')
+  const targetLocation = location || "기본";
+
+  // 1. 🚨 [중요] '기기 관리' 탭에서 기기를 저장/삭제할 때 쓰는 실제 기기 테이블 이름을 입력해주세요.
+  // 여기서는 예시로 테이블명을 `devices`, 장소 컬럼명을 `location`으로 가정했습니다.
+  const checkDeviceSql = `
+    SELECT * FROM devices 
+    WHERE location = ? 
     LIMIT 1
   `;
 
-  getPool().query(sql, (err, results) => {
+  getPool().query(checkDeviceSql, [targetLocation], (err, deviceResults) => {
     if (err) {
-      console.error("홈 DB 오류:", err);
-      saveLog(`홈 DB 오류: ${err.message}`);
+      console.error("홈 기기 상태 조회 오류:", err);
+      saveLog(`홈 기기 상태 조회 오류: ${err.message}`);
       return res.status(500).json({ success: false, message: "DB 오류 발생" });
     }
 
-    if (!results || results.length === 0) {
-      return res.status(404).json({ success: false, message: "데이터 없음" });
+    // 기기 존재 여부 확인 (기기를 삭제하면 테이블에서 행이 지워지므로 결과가 없습니다)
+    const isDeviceExists = deviceResults && deviceResults.length > 0;
+
+    // 만약 기기 삭제 시 데이터를 완전히 지우지 않고 상태(status) 컬럼만 '연결 끊김' 등으로 바꾸는 구조라면
+    // 아래 주석을 해제하고 본인의 컬럼명에 맞게 조건을 수정하여 사용하세요.
+    // const isConnected = isDeviceExists && deviceResults[0].status === '연결됨';
+    
+    const isConnected = isDeviceExists; // 행 삭제 방식일 때의 기준
+
+    if (!isConnected) {
+      // 🚨 기기가 삭제되었거나 없다면 센서 데이터를 전송하지 않고 즉시 '연결 끊김' 응답
+      return res.json({
+        success: true,
+        data: {
+          deviceStatus: "연결 끊김", // 프론트엔드 잠금 화면 트리거
+          score: 0,
+          statusText: "기기 연결 끊김",
+          aiMessage: "기기가 연결되어 있지 않아 데이터를 불러올 수 없습니다.",
+          co2: 0,
+          noise: 0,
+          temperature: 0,
+          humidity: 0,
+          dustPm10: 0,
+          dustPm25: 0
+        }
+      });
     }
 
-    const data = results[0];
+    // 2. 기기가 정상적으로 존재(연결)할 때만 실제 센서 데이터(home_status) 최신 1건 조회
+    const sql = `
+      SELECT *
+      FROM home_status
+      WHERE location = ?
+      ORDER BY CREATE_AT DESC
+      LIMIT 1
+    `;
 
-    res.json({
-      success: true,
-      data: {
-        score: Number(data.SPACE_SCORE || 0),
-        statusText: data.CST || "알 수 없음",
-        statusLevel: data.STATUS_LEVEL || null,
-        aiMessage: data.AI_MESSAGE || "데이터 없음",
-        co2: Number(data.CO2 || 0),
-        noise: Number(data.NOS || 0),
-        temperature: Number(data.TEMP || 0),
-        humidity: Number(data.HUM || 0),
-        dustPm10: Number(data.DUST_PM10 || 0),
-        dustPm25: Number(data.DUST_PM25 || 0),
-        wifiCount: Number(data.WIFI_COUNT || 0),
-        location: data.location || null,
-        createdAt: data.CREATE_AT
+    getPool().query(sql, [targetLocation], (err, results) => {
+      if (err) {
+        console.error("홈 DB 오류:", err);
+        saveLog(`홈 DB 오류: ${err.message}`);
+        return res.status(500).json({ success: false, message: "DB 오류 발생" });
       }
+
+      if (!results || results.length === 0) {
+        return res.status(404).json({ success: false, message: "데이터 없음" });
+      }
+
+      const data = results[0];
+
+      res.json({
+        success: true,
+        data: {
+          deviceStatus: "연결됨", // 연결됨 상태 전달 -> 프론트엔드 정상 해제
+          score: Number(data.SPACE_SCORE || 0),
+          statusText: data.CST || "알 수 없음",
+          statusLevel: data.STATUS_LEVEL || null,
+          aiMessage: data.AI_MESSAGE || "데이터 없음",
+          co2: Number(data.CO2 || 0),
+          noise: Number(data.NOS || 0),
+          temperature: Number(data.TEMP || 0),
+          humidity: Number(data.HUM || 0),
+          dustPm10: Number(data.DUST_PM10 || 0),
+          dustPm25: Number(data.DUST_PM25 || 0),
+          wifiCount: Number(data.WIFI_COUNT || 0),
+          location: data.location || null,
+          createdAt: data.CREATE_AT
+        }
+      });
     });
   });
 });
 
 // ================== 대시보드 API ==================
 app.get("/dashboard", (req, res) => {
+  const { location } = req.query; // location 파라미터 추가
   const currentSql = `
     SELECT *
     FROM home_status
+    WHERE location = ?
     ORDER BY CREATE_AT DESC
     LIMIT 1
   `;
 
-  getPool().query(currentSql, (err, currentResults) => {
+  getPool().query(currentSql, [location || "기본"], (err, currentResults) => {
     if (err) {
       console.error("대시보드 현재 데이터 조회 실패:", err);
       saveLog(`대시보드 현재 데이터 조회 실패: ${err.message}`);
@@ -108,11 +160,12 @@ app.get("/dashboard", (req, res) => {
         DUST_PM25,
         CREATE_AT
       FROM ${LOG_TABLE}
+      WHERE location = ?
       ORDER BY CREATE_AT DESC
       LIMIT 20
     `;
 
-    getPool().query(chartSql, (err, chartResults) => {
+    getPool().query(chartSql, [location || "기본"], (err, chartResults) => {
       if (err) {
         console.error("대시보드 차트 데이터 조회 실패:", err);
         saveLog(`대시보드 차트 데이터 조회 실패: ${err.message}`);
@@ -159,6 +212,7 @@ app.get("/analytics", (req, res) => {
   saveLog("/analytics API 호출");
 
   const range = req.query.range || "6h";
+  const location = req.query.location || "기본"; // location 파라미터 추가
 
   const rangeMap = {
     "1h": 1,
@@ -185,11 +239,12 @@ app.get("/analytics", (req, res) => {
       ANALYSIS_TEXT,
       ALERT_TYPE
     FROM ${LOG_TABLE}
-    WHERE CREATE_AT >= DATE_SUB((SELECT MAX(CREATE_AT) FROM ${LOG_TABLE}), INTERVAL ? HOUR)
+    WHERE location = ?
+      AND CREATE_AT >= DATE_SUB((SELECT MAX(CREATE_AT) FROM ${LOG_TABLE} WHERE location = ?), INTERVAL ? HOUR)
     ORDER BY CREATE_AT ASC
   `;
 
-  getPool().query(sql, [hours], (err, results) => {
+  getPool().query(sql, [location, location, hours], (err, results) => {
     if (err) {
       console.error("통계 데이터 조회 실패:", err);
       saveLog(`통계 데이터 조회 실패: ${err.message}`);
@@ -296,7 +351,7 @@ app.get("/analytics", (req, res) => {
   });
 });
 
-// ================== 설정 전체 조회 API 수정 ==================
+// ================== 설정 전체 조회 API ==================
 app.get("/settings", (req, res) => {
   const { userName } = req.query; // 사용자 이름으로 특정 데이터 조회
   const settingsSql = `SELECT * FROM app_settings WHERE USER_NAME = ?`;
@@ -393,7 +448,7 @@ app.get("/settings/alerts", (req, res) => {
 // ================== 알림 설정 저장 API ==================
 app.put("/settings/alerts", (req, res) => {
   const {
-    userName, // 수정된 부분: 유저 식별자 추가
+    userName,
     emailAlertEnabled,
     pushAlertEnabled,
     dailyReportEnabled,
@@ -468,7 +523,6 @@ app.post("/settings/subscription", (req, res) => {
     WHERE USER_NAME = ?
   `;
 
-  // subscription 객체를 JSON 문자열로 변환하여 저장
   const values = [JSON.stringify(subscription), userName];
 
   getPool().query(sql, values, (err) => {
@@ -514,42 +568,57 @@ app.get("/settings/devices", (req, res) => {
   });
 });
 
-// ================== 기기 관리 저장 API ==================
-app.put("/settings/devices", (req, res) => {
-  const { userName, deviceName, deviceStatus } = req.body;
+// ================== 기기 관리 삭제 API (수정됨) ==================
+app.delete("/settings/devices", (req, res) => {
+  console.log("[Backend] DELETE /settings/devices 요청 수신. Body:", req.body);
+  const { userName } = req.body;
+
+  if (!userName) {
+    console.error("삭제 요청 실패: userName 누락");
+    return res.status(400).json({ success: false, message: "userName이 누락되었습니다." });
+  }
 
   const sql = `
     UPDATE app_settings
     SET
-      DEVICE_NAME = ?,
-      DEVICE_STATUS = ?,
-      LAST_CONNECTED = NOW()
+      DEVICE_NAME = NULL,
+      DEVICE_STATUS = '연결안됨',
+      LAST_CONNECTED = NULL
     WHERE USER_NAME = ?
   `;
 
-  const values = [deviceName, deviceStatus, userName];
-
-  getPool().query(sql, values, (err) => {
+  getPool().query(sql, [userName], (err, result) => {
     if (err) {
-      console.error("기기 관리 저장 실패:", err);
-      saveLog(`기기 관리 저장 실패: ${err.message}`);
-      return res.status(500).json({ success: false, message: "기기 관리 저장 실패" });
+      console.error("기기 삭제 실패(SQL):", err);
+      saveLog(`기기 삭제 실패: ${err.message}`);
+      return res.status(500).json({ success: false, message: "기기 삭제 실패" });
     }
 
-    res.json({ success: true, message: "기기 정보가 저장되었습니다." });
+    if (result.affectedRows === 0) {
+      console.warn("기기 삭제 시도했으나 변경된 행이 없음 (유저 불일치 등)");
+      return res.json({ success: false, message: "삭제할 기기가 없거나 유저 정보를 찾을 수 없습니다." });
+    }
+
+    console.log(`[Backend] 기기 삭제 완료. (UserName: ${userName})`);
+    res.json({ success: true, message: "기기가 삭제되었습니다." });
   });
 });
 
 // ================== 프로필 조회 API ==================
 app.get("/settings/profile", (req, res) => {
   const { userName } = req.query;
-  const sql = `
-    SELECT USER_NAME, USER_EMAIL, USER_SPACE
-    FROM app_settings
-    WHERE USER_NAME = ?
-  `;
+  let sql = `SELECT USER_NAME, USER_EMAIL, USER_SPACE FROM app_settings`;
+  let params = [];
 
-  getPool().query(sql, [userName], (err, results) => {
+  // userName이 없으면 첫 번째 유저 데이터를 가져오도록 수정
+  if (userName) {
+    sql += ` WHERE USER_NAME = ?`;
+    params = [userName];
+  } else {
+    sql += ` LIMIT 1`;
+  }
+
+  getPool().query(sql, params, (err, results) => {
     if (err) {
       console.error("프로필 조회 실패:", err);
       saveLog(`프로필 조회 실패: ${err.message}`);
@@ -573,16 +642,14 @@ app.get("/settings/profile", (req, res) => {
   });
 });
 
-// ================== 프로필 생성 API (수정) ==================
+// ================== 프로필 생성 API ==================
 app.post("/settings/profile", (req, res) => {
   const { userName, userEmail, userSpace } = req.body;
 
-  // 1. 데이터 검증 (중요!)
   if (!userName) {
     return res.status(400).json({ success: false, message: "아이디(USER_NAME)는 필수입니다." });
   }
 
-  // 2. 이미 존재하는지 확인 후 삽입 (INSERT IGNORE 사용)
   const sql = `
     INSERT IGNORE INTO app_settings (USER_NAME, USER_EMAIL, USER_SPACE)
     VALUES (?, ?, ?)
@@ -602,11 +669,12 @@ app.post("/settings/profile", (req, res) => {
   });
 });
 
-// ================== 프로필 저장 API ==================
+// ================== 프로필 저장 API (스마트 자동 연결 로직) ==================
 app.put("/settings/profile", (req, res) => {
   const { userName, userEmail, userSpace } = req.body;
 
-  const sql = `
+  // 1. 프로필 정보(이메일, 공간)만 업데이트 (기기 정보는 아래에서 별도 처리)
+  const updateProfileSql = `
     UPDATE app_settings
     SET
       USER_EMAIL = ?,
@@ -614,16 +682,41 @@ app.put("/settings/profile", (req, res) => {
     WHERE USER_NAME = ?
   `;
 
-  const values = [userEmail, userSpace, userName];
-
-  getPool().query(sql, values, (err) => {
+  getPool().query(updateProfileSql, [userEmail, userSpace, userName], (err) => {
     if (err) {
       console.error("프로필 저장 실패:", err);
       saveLog(`프로필 저장 실패: ${err.message}`);
       return res.status(500).json({ success: false, message: "프로필 저장 실패" });
     }
 
-    res.json({ success: true, message: "프로필 정보가 저장되었습니다." });
+    // 2. 해당 공간(userSpace)에 실제 센서 데이터가 존재하는지 확인
+    const checkDeviceSql = `
+      SELECT location FROM home_status 
+      WHERE location = ? 
+      ORDER BY CREATE_AT DESC LIMIT 1
+    `;
+
+    getPool().query(checkDeviceSql, [userSpace], (deviceErr, deviceResults) => {
+      // 기기가 존재하면 연결, 없으면 NULL 처리
+      const isExists = (!deviceErr && deviceResults && deviceResults.length > 0);
+      const deviceName = isExists ? userSpace : null;
+      const deviceStatus = isExists ? '연결됨' : '연결안됨';
+      const lastConnected = isExists ? new Date() : null;
+
+      const updateStatusSql = `
+        UPDATE app_settings
+        SET DEVICE_NAME = ?, DEVICE_STATUS = ?, LAST_CONNECTED = ?
+        WHERE USER_NAME = ?
+      `;
+
+      getPool().query(updateStatusSql, [deviceName, deviceStatus, lastConnected, userName], (updateErr) => {
+        if (updateErr) {
+          console.error("기기 상태 자동 동기화 실패:", updateErr);
+          return res.status(500).json({ success: false, message: "기기 상태 자동 동기화 실패" });
+        }
+        res.json({ success: true, message: "프로필이 저장되었으며, 기기 상태가 동기화되었습니다." });
+      });
+    });
   });
 });
 

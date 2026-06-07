@@ -33,7 +33,7 @@ export const AlarmTab = ({ settings, handleSettingChange, saveSettings, isLocked
   </section>
 );
 
-export const DeviceTab = ({ devices, deleteDevice, showDeviceModal, setShowDeviceModal, newDevice, setNewDevice, addDevice }) => (
+export const DeviceTab = ({ devices, deleteDevice, showDeviceModal, setShowDeviceModal, newDevice, setNewDevice, addDevice, toggleDeviceStatus }) => (
   <section className="settings-section">
     <h2>등록된 기기</h2>
     <p className="settings-desc">현재 연결된 센서 기기 목록입니다</p>
@@ -42,8 +42,23 @@ export const DeviceTab = ({ devices, deleteDevice, showDeviceModal, setShowDevic
         <div className="setting-row device-row" key={device.id}>
           <div><b>{device.name}</b><p>{device.location} · {device.time}</p></div>
           <div className="device-actions">
-            <span className={`device-status ${device.status === "연결됨" ? "good-text" : "offline-text"}`}>{device.status}</span>
-            <button className="delete-device-btn" onClick={() => deleteDevice(device.id)}>삭제</button>
+            <span 
+              className={`device-status ${device.status === "연결됨" ? "good-text" : "offline-text"}`}
+              onClick={() => toggleDeviceStatus(device.status)}
+              style={{ cursor: 'pointer' }}
+            >
+              {device.status}
+            </span>
+            <button 
+              className="delete-device-btn" 
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log("삭제 버튼 클릭됨, ID:", device.id);
+                deleteDevice(device.id);
+              }}
+            >
+              삭제
+            </button>
           </div>
         </div>
       ))}

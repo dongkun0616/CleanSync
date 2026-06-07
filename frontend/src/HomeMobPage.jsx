@@ -5,11 +5,14 @@ const HomeMobPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // 기기 연결 상태 추가
+  const [isDeviceConnected, setIsDeviceConnected] = useState(false);
 
   const [sensorData, setSensorData] = useState({
     score: 0,
     statusText: '로딩 중...',
-    aiMessage: '...',
+    aiMessage: '데이터를 불러오는 중입니다.',
     temp: 0,
     humi: 0,
     co2: 0,
@@ -18,7 +21,9 @@ const HomeMobPage = () => {
     pm25: 0,
   });
 
-  const getTheme = (score) => {
+  // 테마 함수에 연결 상태 반영
+  const getTheme = (score, isConnected) => {
+    if (!isConnected) return { color: '#94A3B8', bg: '#F1F5F9' };
     if (score >= 80) return { color: '#10B981', bg: '#F0FDF4' };
     if (score >= 60) return { color: '#F59E0B', bg: '#FFFBEB' };
     return { color: '#EF4444', bg: '#FEF2F2' };
@@ -26,25 +31,47 @@ const HomeMobPage = () => {
 
   const fetchData = async () => {
     try {
-      const response = await fetch('/api/home');
+      const locationName = '동아리방';
+      const response = await fetch(`http://localhost:5000/home?location=${locationName}`);
       const result = await response.json();
 
-      if (result.success && result.data) {
+      if (result && result.success && result.data) {
         const d = result.data;
-        setSensorData({
-          score: Number(d.score || 0),
-          statusText: d.statusText || '알 수 없음',
-          aiMessage: d.aiMessage || '분석 중인 데이터가 없습니다.',
-          temp: Number(d.temperature || 0),
-          humi: Number(d.humidity || 0),
-          co2: Number(d.co2 || 0),
-          noise: Number(d.noise || 0),
-          pm10: Number(d.dustPm10 || 0),
-          pm25: Number(d.dustPm25 || 0),
-        });
+        const connected = String(d.deviceStatus || '').includes('연결됨');
+        
+        setIsDeviceConnected(connected);
+
+        if (connected) {
+          setSensorData({
+            score: Number(d.score || 0),
+            statusText: d.statusText || '알 수 없음',
+            aiMessage: d.aiMessage || '분석 중인 데이터가 없습니다.',
+            temp: Number(d.temperature || 0),
+            humi: Number(d.humidity || 0),
+            co2: Number(d.co2 || 0),
+            noise: Number(d.noise || 0),
+            pm10: Number(d.dustPm10 || 0),
+            pm25: Number(d.dustPm25 || 0),
+          });
+        } else {
+          setSensorData({
+            score: 0,
+            statusText: '기기 연결 끊김',
+            aiMessage: '기기가 연결되어 있지 않아 데이터를 불러올 수 없습니다.',
+            temp: 0,
+            humi: 0,
+            co2: 0,
+            noise: 0,
+            pm10: 0,
+            pm25: 0,
+          });
+        }
+      } else {
+        setIsDeviceConnected(false);
       }
     } catch (e) {
-      console.error(e);
+      console.error('데이터 통신 오류:', e);
+      setIsDeviceConnected(false);
     }
   };
 
@@ -54,7 +81,7 @@ const HomeMobPage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const theme = getTheme(sensorData.score);
+  const theme = getTheme(sensorData.score, isDeviceConnected);
 
   const navMenus = [
     { label: '홈', sub: '현재 상태', path: '/' },
@@ -64,10 +91,10 @@ const HomeMobPage = () => {
   ];
 
   const otherSensors = [
-    { icon: '/temp-icon.png', label: '온도', val: sensorData.temp, unit: '°C' },
-    { icon: '/hum-icon.png', label: '습도', val: sensorData.humi, unit: '%' },
-    { icon: '/dust-icon.png', label: '미세먼지', val: sensorData.pm10, unit: '㎍/㎥' },
-    { icon: '/dustpm-icon.png', label: '초미세먼지', val: sensorData.pm25, unit: '㎍/㎥' },
+    { icon: '/temp-icon.png', label: '온도', val: isDeviceConnected ? sensorData.temp : '--', unit: '°C' },
+    { icon: '/hum-icon.png', label: '습도', val: isDeviceConnected ? sensorData.humi : '--', unit: '%' },
+    { icon: '/dust-icon.png', label: '미세먼지', val: isDeviceConnected ? sensorData.pm10 : '--', unit: '㎍/㎥' },
+    { icon: '/dustpm-icon.png', label: '초미세먼지', val: isDeviceConnected ? sensorData.pm25 : '--', unit: '㎍/㎥' },
   ];
 
   return (
@@ -158,7 +185,6 @@ const HomeMobPage = () => {
         <nav>
           {navMenus.map((menu) => {
             const isActive = location.pathname === menu.path;
-
             return (
               <div
                 key={menu.path}
@@ -239,7 +265,7 @@ const HomeMobPage = () => {
               fontFamily: "'DM Mono', monospace",
             }}
           >
-            ● {sensorData.score}
+            {isDeviceConnected ? `● ${sensorData.score}` : '○ Offline'}
           </span>
           <span style={{ fontSize: '24px' }}>☰</span>
         </div>
@@ -288,7 +314,7 @@ const HomeMobPage = () => {
               fontFamily: "'DM Mono', monospace",
             }}
           >
-            {sensorData.score}
+            {isDeviceConnected ? sensorData.score : '--'}
           </div>
           <div style={{ fontSize: '20px', fontWeight: '800' }}>
             {sensorData.statusText}
@@ -320,7 +346,7 @@ const HomeMobPage = () => {
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '13px', color: '#64748B' }}>CO₂ 농도</div>
           <div style={{ fontSize: '20px', fontWeight: '800', fontFamily: "'DM Mono', monospace" }}>
-            {sensorData.co2} ppm
+            {isDeviceConnected ? `${sensorData.co2} ppm` : '-- ppm'}
           </div>
         </div>
       </div>
@@ -330,7 +356,7 @@ const HomeMobPage = () => {
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '13px', color: '#64748B' }}>소음 수준</div>
           <div style={{ fontSize: '20px', fontWeight: '800', fontFamily: "'DM Mono', monospace" }}>
-            {sensorData.noise} dB
+            {isDeviceConnected ? `${sensorData.noise} dB` : '-- dB'}
           </div>
         </div>
       </div>
@@ -354,26 +380,18 @@ const HomeMobPage = () => {
           }}
         >
           <img
-  src={item.icon}
-  alt={item.label}
-  style={{
-    width:
-      item.label === '온도' || item.label === '습도'
-        ? '70px'
-        : '32px',
-
-    height:
-      item.label === '온도' || item.label === '습도'
-        ? '70px'
-        : '32px',
-
-    objectFit: 'contain'
-  }}
-/>
+            src={item.icon}
+            alt={item.label}
+            style={{
+              width: item.label === '온도' || item.label === '습도' ? '70px' : '32px',
+              height: item.label === '온도' || item.label === '습도' ? '70px' : '32px',
+              objectFit: 'contain',
+            }}
+          />
           <div style={{ flex: 1, fontWeight: '600' }}>{item.label}</div>
           <div style={{ fontWeight: '800', fontFamily: "'DM Mono', monospace" }}>
             {item.val}
-            {item.unit}
+            {isDeviceConnected ? item.unit : ''}
           </div>
         </div>
       ))}

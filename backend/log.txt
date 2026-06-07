@@ -1663,3 +1663,60 @@
 [2026-06-07T06:07:17.853Z] /analytics API 호출
 [2026-06-07T06:30:07.428Z] 서버 실행
 [2026-06-07T06:31:49.941Z] 서버 실행
+[2026-06-07T07:42:14.569Z] /analytics API 호출
+[2026-06-07T07:42:14.619Z] /analytics API 호출
+[2026-06-07T07:42:29.008Z] /analytics API 호출
+[2026-06-07T07:42:29.023Z] /analytics API 호출
+[2026-06-07T07:43:30.622Z] /analytics API 호출
+[2026-06-07T07:43:30.638Z] /analytics API 호출
+[2026-06-07T07:46:56.502Z] 서버 실행
+[2026-06-07T07:47:05.651Z] /analytics API 호출
+[2026-06-07T07:47:05.827Z] /analytics API 호출
+[2026-06-07T07:47:06.711Z] /analytics API 호출
+[2026-06-07T07:47:06.725Z] /analytics API 호출
+[2026-06-07T07:52:34.881Z] /analytics API 호출
+[2026-06-07T07:52:34.897Z] /analytics API 호출
+[2026-06-07T07:52:40.653Z] /analytics API 호출
+[2026-06-07T07:52:40.666Z] /analytics API 호출
+[2026-06-07T07:54:06.770Z] 서버 실행
+[2026-06-07T08:37:36.358Z] 서버 실행
+[2026-06-07T08:39:39.254Z] /analytics API 호출
+[2026-06-07T08:39:39.305Z] /analytics API 호출
+[2026-06-07T08:44:58.370Z] 서버 실행
+[2026-06-07T08:52:09.658Z] 서버 실행
+[2026-06-07T08:52:15.983Z] /analytics API 호출
+[2026-06-07T08:52:16.036Z] /analytics API 호출
+[2026-06-07T08:52:17.860Z] /analytics API 호출
+[2026-06-07T08:52:17.910Z] /analytics API 호출
+[2026-06-07T08:54:40.758Z] /analytics API 호출
+[2026-06-07T08:54:40.813Z] /analytics API 호출
+[2026-06-07T08:55:03.876Z] /analytics API 호출
+[2026-06-07T08:55:03.932Z] /analytics API 호출
+[2026-06-07T08:55:06.192Z] /analytics API 호출
+[2026-06-07T08:55:06.256Z] /analytics API 호출
+[2026-06-07T08:55:07.589Z] /analytics API 호출
+[2026-06-07T08:55:07.738Z] /analytics API 호출
+[2026-06-07T08:55:09.476Z] /analytics API 호출
+[2026-06-07T08:55:09.528Z] /analytics API 호출
+[2026-06-07T08:55:37.447Z] /analytics API 호출
+[2026-06-07T08:55:37.500Z] /analytics API 호출
+[2026-06-07T08:56:54.980Z] /analytics API 호출
+[2026-06-07T08:56:55.026Z] /analytics API 호출
+[2026-06-07T08:56:56.060Z] /analytics API 호출
+[2026-06-07T08:56:56.106Z] /analytics API 호출
+[2026-06-07T08:56:58.363Z] /analytics API 호출
+[2026-06-07T08:56:58.423Z] /analytics API 호출
+[2026-06-07T08:57:00.740Z] /analytics API 호출
+[2026-06-07T08:57:00.855Z] /analytics API 호출
+[2026-06-07T08:59:58.606Z] 서버 실행
+[2026-06-07T09:02:44.324Z] 서버 실행
+[2026-06-07T09:11:45.589Z] 서버 실행
+[2026-06-07T09:30:05.758Z] 서버 실행
+[2026-06-07T10:06:51.445Z] 서버 실행
+[2026-06-07T11:13:37.184Z] 서버 실행
+[2026-06-07T11:13:41.108Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T11:13:41.152Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T11:13:42.133Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T11:13:42.179Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T11:13:42.627Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T11:13:42.673Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist

@@ -256,7 +256,21 @@ def on_message(client, userdata, msg):
 
         conn = pymysql.connect(**DB_CONFIG)
         with conn.cursor() as cursor:
-            # 1. 데이터 저장
+            # 1. 먼저 기기 연결 상태 및 설정 조회
+            query = """
+                SELECT DEVICE_STATUS, USER_EMAIL, EMAIL_ALERT, PUSH_ALERT,
+                       CO2_THRESHOLD, NOS_THRESHOLD, TEMP_THRESHOLD, DUST_THRESHOLD, PUSH_SUBSCRIPTION 
+                FROM app_settings LIMIT 1
+            """
+            cursor.execute(query)
+            user_setting = cursor.fetchone()
+
+            # 연결 상태 확인
+            if not user_setting or user_setting['DEVICE_STATUS'] != '연결됨':
+                print("🛑 기기 연결 해제 상태 - 데이터 수집 중단")
+                return
+
+            # 2. 데이터 저장
             sql = """
                 INSERT INTO home_status 
                 (DUST_PM10, DUST_PM25, TEMP, HUM, NOS, CREATE_AT, DST, CST, CS, WIFI_COUNT, location, CO2, SPACE_SCORE, AI_MESSAGE, STATUS_LEVEL)
@@ -265,48 +279,38 @@ def on_message(client, userdata, msg):
             values = (pm10, pm25, temp, hum, noise, formatted_time, dst_status, cst, cs, 0, "동아리방", co2, space_score, ai_message, status_level)
             cursor.execute(sql, values)
 
-            # 2. DB에서 설정값 및 이메일/푸시 정보 조회
-            query = """
-                SELECT USER_EMAIL, EMAIL_ALERT, PUSH_ALERT,
-                       CO2_THRESHOLD, NOS_THRESHOLD, TEMP_THRESHOLD, DUST_THRESHOLD, PUSH_SUBSCRIPTION 
-                FROM app_settings LIMIT 1
-            """
-            cursor.execute(query)
-            user_setting = cursor.fetchone()
-
-            if user_setting:
-                current_time = time.time()
+            # 3. 알림 로직 (위에서 조회한 user_setting 활용)
+            current_time = time.time()
+            
+            # --- 쿨타임 (1800초 = 30분) ---
+            if current_time - last_email_sent_time > 1800:
+                alerts = []
                 
-                # --- 쿨타임 (1800초 = 30분) ---
-                if current_time - last_email_sent_time > 1800:
-                    alerts = []
-                    
-                    if co2 > user_setting['CO2_THRESHOLD']: 
-                        alerts.append(f"- CO2: {co2}ppm")
-                    if noise > user_setting['NOS_THRESHOLD']: 
-                        alerts.append(f"- 소음: {noise}dB")
-                    if temp > user_setting['TEMP_THRESHOLD']: 
-                        alerts.append(f"- 온도: {temp}°C")
-                    if pm25 > user_setting['DUST_THRESHOLD']: 
-                        alerts.append(f"- 미세먼지: {pm25}µg/m³")
+                if co2 > user_setting['CO2_THRESHOLD']: 
+                    alerts.append(f"- CO2: {co2}ppm")
+                if noise > user_setting['NOS_THRESHOLD']: 
+                    alerts.append(f"- 소음: {noise}dB")
+                if temp > user_setting['TEMP_THRESHOLD']: 
+                    alerts.append(f"- 온도: {temp}°C")
+                if pm25 > user_setting['DUST_THRESHOLD']: 
+                    alerts.append(f"- 미세먼지: {pm25}µg/m³")
 
-                    if alerts:
-                        # 수정된 메시지 적용
-                        full_msg = "데이터가 임계치에 도달하였습니다. Clean-Sync을 통해 확인하세요!"
+                if alerts:
+                    full_msg = "데이터가 임계치에 도달하였습니다. Clean-Sync을 통해 확인하세요!"
+                    
+                    # 이메일 알림
+                    if user_setting['EMAIL_ALERT'] == 1:
+                        send_email(
+                            user_setting['USER_EMAIL'], 
+                            "[Clean-Sync] 실내 환경 경고 알림", 
+                            full_msg
+                        )
+                    
+                    # 푸시 알림
+                    if user_setting['PUSH_ALERT'] == 1 and user_setting['PUSH_SUBSCRIPTION']:
+                        send_web_push(user_setting['PUSH_SUBSCRIPTION'], full_msg)
                         
-                        # 이메일 알림
-                        if user_setting['EMAIL_ALERT'] == 1:
-                            send_email(
-                                user_setting['USER_EMAIL'], 
-                                "[Clean-Sync] 실내 환경 경고 알림", 
-                                full_msg
-                            )
-                        
-                        # 푸시 알림
-                        if user_setting['PUSH_ALERT'] == 1 and user_setting['PUSH_SUBSCRIPTION']:
-                            send_web_push(user_setting['PUSH_SUBSCRIPTION'], full_msg)
-                            
-                        last_email_sent_time = current_time
+                    last_email_sent_time = current_time
         
         conn.commit()
         print(f"✔️ 저장 완료 | {formatted_time} | CO2={co2}")
