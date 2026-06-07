@@ -41,8 +41,8 @@ const SettingsMobPage = () => {
 
   const fetchData = async () => {
     try {
-      // 1. 환경변수 적용 (GET - 초기 데이터 로드)
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/settings?userName=${initialUserName}&location=${locationName}`);
+      // 1. Vite 환경변수(import.meta.env.VITE_API_URL) 적용 (GET - 초기 데이터 로드)
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/settings?userName=${initialUserName}&location=${locationName}`);
       if (res.data && res.data.success) {
         const { currentStatus, alerts, devices: deviceData, profile: profileData } = res.data.data;
         
@@ -75,30 +75,30 @@ const SettingsMobPage = () => {
 
   const saveSettings = async () => {
     if (isLocked) { alert("기기 등록 및 프로필 저장이 필요합니다."); return; }
-    // 2. 환경변수 적용 (PUT - 알림 설정 저장)
-    await axios.put(`${process.env.REACT_APP_API_URL}/settings/alerts`, { ...settings, userName: profile.userName });
+    // 2. Vite 환경변수 적용 (PUT - 알림 설정 저장)
+    await axios.put(`${import.meta.env.VITE_API_URL}/settings/alerts`, { ...settings, userName: profile.userName });
     alert('설정이 저장되었습니다.');
     fetchData();
   };
 
   const toggleDeviceStatus = async (currentStatus) => {
     const newStatus = currentStatus === '연결됨' ? '연결안됨' : '연결됨';
-    // 3. 환경변수 적용 (PUT - 기기 상태 변경)
-    await axios.put(`${process.env.REACT_APP_API_URL}/settings/devices`, { userName: initialUserName, deviceName: devices[0]?.name, deviceStatus: newStatus });
+    // 3. Vite 환경변수 적용 (PUT - 기기 상태 변경)
+    await axios.put(`${import.meta.env.VITE_API_URL}/settings/devices`, { userName: initialUserName, deviceName: devices[0]?.name, deviceStatus: newStatus });
     fetchData();
   };
 
   const deleteDevice = async () => {
-    // 4. 환경변수 적용 (DELETE - 기기 삭제)
-    await axios.delete(`${process.env.REACT_APP_API_URL}/settings/devices`, { data: { userName: initialUserName } });
+    // 4. Vite 환경변수 적용 (DELETE - 기기 삭제)
+    await axios.delete(`${import.meta.env.VITE_API_URL}/settings/devices`, { data: { userName: initialUserName } });
     setDevices([]);
     await fetchData();
     alert("기기가 삭제되었습니다.");
   };
 
   const saveProfile = async () => {
-    // 5. 환경변수 적용 (PUT - 프로필 저장)
-    await axios.put(`${process.env.REACT_APP_API_URL}/settings/profile`, profile);
+    // 5. Vite 환경변수 적용 (PUT - 프로필 저장)
+    await axios.put(`${import.meta.env.VITE_API_URL}/settings/profile`, profile);
     alert('프로필이 저장되었습니다.');
     fetchData();
   };

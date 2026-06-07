@@ -97,8 +97,8 @@ const SettingsPage = () => {
   // 데이터 불러오기 함수
   const fetchData = async () => {
     try {
-      // 1. 환경변수 적용 완료 (GET)
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/settings?userName=${initialUserName}&location=${locationName}`);
+      // 1. Vite 환경변수 적용 (GET)
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/settings?userName=${initialUserName}&location=${locationName}`);
       
       if (res.data && res.data.success) {
         const { currentStatus, alerts, devices: deviceData, profile: profileData } = res.data.data;
@@ -164,8 +164,8 @@ const SettingsPage = () => {
   const toggleDeviceStatus = async (currentStatus) => {
     const newStatus = currentStatus === '연결됨' ? '연결안됨' : '연결됨';
     try {
-      // 2. 환경변수 적용 완료 (PUT - 기기 상태)
-      const res = await axios.put(`${process.env.REACT_APP_API_URL}/settings/devices`, {
+      // 2. Vite 환경변수 적용 (PUT - 기기 상태)
+      const res = await axios.put(`${import.meta.env.VITE_API_URL}/settings/devices`, {
         userName: initialUserName,
         deviceName: devices[0]?.name || '내 기기',
         deviceStatus: newStatus
@@ -206,8 +206,8 @@ const SettingsPage = () => {
         userName: profile.userName
       };
       
-      // 3. 환경변수 적용 완료 (PUT - 알림 설정)
-      await axios.put(`${process.env.REACT_APP_API_URL}/settings/alerts`, payload);
+      // 3. Vite 환경변수 적용 (PUT - 알림 설정)
+      await axios.put(`${import.meta.env.VITE_API_URL}/settings/alerts`, payload);
       alert('설정이 저장되었습니다.');
       fetchData();
     } catch (err) {
@@ -218,8 +218,8 @@ const SettingsPage = () => {
 
   const deleteDevice = async (deviceId) => {
     try {
-      // 4. 환경변수 적용 완료 (DELETE - 기기 삭제)
-      const res = await axios.delete(`${process.env.REACT_APP_API_URL}/settings/devices`, {
+      // 4. Vite 환경변수 적용 (DELETE - 기기 삭제)
+      const res = await axios.delete(`${import.meta.env.VITE_API_URL}/settings/devices`, {
         data: { userName: initialUserName }
       });
       
@@ -252,8 +252,8 @@ const SettingsPage = () => {
 
   const saveProfile = async () => {
     try {
-      // 5. 환경변수 적용 완료 (PUT - 프로필 저장)
-      const res = await axios.put(`${process.env.REACT_APP_API_URL}/settings/profile`, {
+      // 5. Vite 환경변수 적용 (PUT - 프로필 저장)
+      const res = await axios.put(`${import.meta.env.VITE_API_URL}/settings/profile`, {
         userName: profile.userName,
         userEmail: profile.userEmail,
         userSpace: profile.userSpace

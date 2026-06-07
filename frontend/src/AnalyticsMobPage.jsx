@@ -45,51 +45,49 @@ const AnalyticsMobPage = () => {
     { label: '설정', sub: '환경 설정', path: '/settings' },
   ];
 
-  const fetchAnalyticsData = async (range) => {
-    try {
-      const initialUserName = 'dongdong';
-      
-      // 요청 주소를 process.env.REACT_APP_API_URL로 수정 완료
-      const [profileRes, deviceRes] = await Promise.all([
-        axios.get(`${process.env.REACT_APP_API_URL}/settings/profile?userName=${initialUserName}`),
-        axios.get(`${process.env.REACT_APP_API_URL}/settings/devices?userName=${initialUserName}`)
-      ]);
-
-      // 2. 기기 연결 상태 판별
-      if (deviceRes.data?.data?.deviceStatus !== '연결됨') {
-        setIsConnected(false);
-        return;
-      }
-      setIsConnected(true);
-
-      let userSpace = profileRes.data?.data?.userSpace || '동아리방';
-      const rangeCode = range.replace('시간', 'h');
-      
-      // 요청 주소를 process.env.REACT_APP_API_URL로 수정 완료
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/analytics?range=${rangeCode}&location=${encodeURIComponent(userSpace)}`);
-      
-      if (response.data && response.data.success) {
-        const data = response.data.data;
-        setApiData(data);
-        
-        if (data.chart && data.chart.length > 0) {
-          const latest = data.chart[data.chart.length - 1];
-          const scoreVal = Math.round(latest.spaceScore);
-          // 통일된 텍스트 적용
-          setSensorData({ 
-            score: scoreVal, 
-            statusText: getStatusInfo(scoreVal).text 
-          });
-        }
-      }
-    } catch (error) {
-      console.error('API 호출 실패:', error);
-    }
-  };
-
+  // 2. useEffect 내부로 데이터 로깅 함수를 격리하여 중복 호출 및 종속성 경고 해결
   useEffect(() => {
-    fetchAnalyticsData(timeFilter);
-  }, [timeFilter]);
+    const fetchAnalyticsData = async () => {
+      try {
+        const initialUserName = 'dongdong';
+        
+        const [profileRes, deviceRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_API_URL}/settings/profile?userName=${initialUserName}`),
+          axios.get(`${import.meta.env.VITE_API_URL}/settings/devices?userName=${initialUserName}`)
+        ]);
+
+        if (deviceRes.data?.data?.deviceStatus !== '연결됨') {
+          setIsConnected(false);
+          return;
+        }
+        setIsConnected(true);
+
+        let userSpace = profileRes.data?.data?.userSpace || '동아리방';
+        const rangeCode = timeFilter.replace('시간', 'h');
+        
+        // 주석 수정: Vite 환경 변수 적용 확인
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/analytics?range=${rangeCode}&location=${encodeURIComponent(userSpace)}`);
+        
+        if (response.data && response.data.success) {
+          const data = response.data.data;
+          setApiData(data);
+          
+          if (data.chart && data.chart.length > 0) {
+            const latest = data.chart[data.chart.length - 1];
+            const scoreVal = Math.round(latest.spaceScore);
+            setSensorData({ 
+              score: scoreVal, 
+              statusText: getStatusInfo(scoreVal).text 
+            });
+          }
+        }
+      } catch (error) {
+        console.error('API 호출 실패:', error);
+      }
+    };
+
+    fetchAnalyticsData();
+  }, [timeFilter]); // timeFilter가 바뀔 때만 안전하게 딱 1번 실행됩니다.
 
   const processedData = useMemo(() => {
     if (!apiData || !apiData.chart || apiData.chart.length === 0) return null;
@@ -110,8 +108,8 @@ const AnalyticsMobPage = () => {
     };
 
     return {
-      bestFocus: { time: bestFocus.time.substring(11, 16), score: Math.round(bestFocus.spaceScore) },
-      maxCo2: { time: maxCo2.time.substring(11, 16), ppm: Math.round(maxCo2.co2) },
+      bestFocus: { time: bestFocus.time?.substring(11, 16) || '--:--', score: Math.round(bestFocus.spaceScore) },
+      maxCo2: { time: maxCo2.time?.substring(11, 16) || '--:--', ppm: Math.round(maxCo2.co2) },
       comfortRatio: `${comfortRatio}%`,
       avgInfo: { score: Math.round(avgScore), noise: Math.round(avgNoise) },
       stats: {
@@ -128,13 +126,13 @@ const AnalyticsMobPage = () => {
     setActiveMetrics(prev => prev.includes(metricId) ? prev.filter(id => id !== metricId) : [...prev, metricId]);
   };
 
+  // 중복 fetch 제거하고 상태 스위칭만 전담하도록 변경
   const handleFilterClick = (time) => {
     setTimeFilter(time);
-    fetchAnalyticsData(time);
   };
 
   const chartData = apiData ? {
-    labels: apiData.chart.map(item => item.time.substring(11, 16)),
+    labels: apiData.chart.map(item => item.time?.substring(11, 16) || ''),
     datasets: METRIC_CONFIG
       .filter(metric => activeMetrics.includes(metric.id))
       .map(metric => {
