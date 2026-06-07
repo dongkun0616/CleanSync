@@ -1720,3 +1720,191 @@
 [2026-06-07T11:13:42.179Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
 [2026-06-07T11:13:42.627Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
 [2026-06-07T11:13:42.673Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:06:05.209Z] 서버 실행
+[2026-06-07T12:18:06.692Z] 서버 실행
+[2026-06-07T12:18:28.424Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:18:28.471Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:19:31.200Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:19:31.251Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:36:27.839Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:36:27.894Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:36:30.617Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:36:33.618Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:36:36.662Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:36:40.558Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:36:43.587Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:36:46.604Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:36:49.599Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:36:52.621Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:36:55.574Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:36:58.553Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:02.273Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:04.567Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:07.554Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:10.571Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:13.563Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:16.556Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:19.567Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:22.562Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:25.561Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:28.576Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:31.562Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:34.571Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:38.209Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:39.626Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:40.304Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:40.364Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:43.360Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:46.327Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:49.331Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:52.327Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:55.316Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:37:58.321Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:01.326Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:04.322Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:07.316Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:10.317Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:13.316Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:16.325Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:19.519Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:22.522Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:25.317Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:28.332Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:31.315Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:32.047Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:32.108Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:35.003Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:38.375Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:38.422Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:41.396Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:44.390Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:47.581Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:50.614Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:53.545Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:56.579Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:38:59.571Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:02.560Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:05.569Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:08.560Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:11.579Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:14.629Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:17.551Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:20.570Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:23.580Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:26.566Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:29.564Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:32.550Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:35.553Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:38.560Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:41.560Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:39:44.554Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:40:18.919Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:41:18.580Z] 홈 기기 상태 조회 오류: Table 'iot_db.devices' doesn't exist
+[2026-06-07T12:41:59.059Z] 서버 실행
+[2026-06-07T12:42:25.150Z] /analytics API 호출
+[2026-06-07T12:42:25.208Z] /analytics API 호출
+[2026-06-07T12:42:36.852Z] /analytics API 호출
+[2026-06-07T12:42:38.279Z] /analytics API 호출
+[2026-06-07T12:42:39.988Z] /analytics API 호출
+[2026-06-07T12:42:55.029Z] /analytics API 호출
+[2026-06-07T12:42:55.084Z] /analytics API 호출
+[2026-06-07T12:42:56.074Z] /analytics API 호출
+[2026-06-07T12:42:56.125Z] /analytics API 호출
+[2026-06-07T12:42:59.520Z] /analytics API 호출
+[2026-06-07T12:42:59.568Z] /analytics API 호출
+[2026-06-07T12:43:00.868Z] /analytics API 호출
+[2026-06-07T12:43:00.910Z] /analytics API 호출
+[2026-06-07T12:43:01.969Z] /analytics API 호출
+[2026-06-07T12:43:02.016Z] /analytics API 호출
+[2026-06-07T12:43:45.958Z] /analytics API 호출
+[2026-06-07T12:43:46.012Z] /analytics API 호출
+[2026-06-07T12:49:22.089Z] /analytics API 호출
+[2026-06-07T12:49:22.141Z] /analytics API 호출
+[2026-06-07T13:00:45.969Z] /analytics API 호출
+[2026-06-07T13:00:46.037Z] /analytics API 호출
+[2026-06-07T13:11:42.960Z] /analytics API 호출
+[2026-06-07T13:11:43.020Z] /analytics API 호출
+[2026-06-07T13:11:58.246Z] /analytics API 호출
+[2026-06-07T13:11:58.285Z] /analytics API 호출
+[2026-06-07T13:19:49.968Z] /analytics API 호출
+[2026-06-07T13:19:50.032Z] /analytics API 호출
+[2026-06-07T13:20:37.068Z] /analytics API 호출
+[2026-06-07T13:20:37.120Z] /analytics API 호출
+[2026-06-07T13:22:30.794Z] /analytics API 호출
+[2026-06-07T13:22:30.869Z] /analytics API 호출
+[2026-06-07T13:24:22.261Z] /analytics API 호출
+[2026-06-07T13:24:22.355Z] /analytics API 호출
+[2026-06-07T13:26:49.244Z] /analytics API 호출
+[2026-06-07T13:26:49.298Z] /analytics API 호출
+[2026-06-07T13:35:29.348Z] /analytics API 호출
+[2026-06-07T13:35:29.399Z] /analytics API 호출
+[2026-06-07T13:39:56.367Z] 서버 실행
+[2026-06-07T13:40:06.566Z] /analytics API 호출
+[2026-06-07T13:40:06.634Z] /analytics API 호출
+[2026-06-07T13:55:36.162Z] /analytics API 호출
+[2026-06-07T13:55:36.217Z] /analytics API 호출
+[2026-06-07T13:55:56.959Z] /analytics API 호출
+[2026-06-07T13:55:57.054Z] /analytics API 호출
+[2026-06-07T13:59:28.785Z] /analytics API 호출
+[2026-06-07T13:59:28.878Z] /analytics API 호출
+[2026-06-07T13:59:32.122Z] /analytics API 호출
+[2026-06-07T13:59:32.176Z] /analytics API 호출
+[2026-06-07T13:59:36.755Z] /analytics API 호출
+[2026-06-07T13:59:36.850Z] /analytics API 호출
+[2026-06-07T13:59:41.841Z] /analytics API 호출
+[2026-06-07T13:59:41.896Z] /analytics API 호출
+[2026-06-07T14:02:00.159Z] /analytics API 호출
+[2026-06-07T14:02:00.229Z] /analytics API 호출
+[2026-06-07T14:02:10.678Z] /analytics API 호출
+[2026-06-07T14:02:10.747Z] /analytics API 호출
+[2026-06-07T14:02:30.691Z] /analytics API 호출
+[2026-06-07T14:02:30.742Z] /analytics API 호출
+[2026-06-07T14:02:35.042Z] /analytics API 호출
+[2026-06-07T14:02:35.095Z] /analytics API 호출
+[2026-06-07T14:10:22.654Z] /analytics API 호출
+[2026-06-07T14:10:22.776Z] /analytics API 호출
+[2026-06-07T14:10:50.704Z] /analytics API 호출
+[2026-06-07T14:10:50.777Z] /analytics API 호출
+[2026-06-07T14:33:58.890Z] /analytics API 호출
+[2026-06-07T14:33:58.955Z] /analytics API 호출
+[2026-06-07T14:42:36.863Z] /analytics API 호출
+[2026-06-07T14:42:36.960Z] /analytics API 호출
+[2026-06-07T14:42:39.511Z] /analytics API 호출
+[2026-06-07T14:42:39.588Z] /analytics API 호출
+[2026-06-07T14:42:52.277Z] /analytics API 호출
+[2026-06-07T14:42:52.341Z] /analytics API 호출
+[2026-06-07T14:42:54.220Z] /analytics API 호출
+[2026-06-07T14:42:54.297Z] /analytics API 호출
+[2026-06-07T14:43:01.301Z] /analytics API 호출
+[2026-06-07T14:43:01.348Z] /analytics API 호출
+[2026-06-07T14:45:28.690Z] /analytics API 호출
+[2026-06-07T14:45:28.825Z] /analytics API 호출
+[2026-06-07T15:06:27.597Z] /analytics API 호출
+[2026-06-07T15:06:27.664Z] /analytics API 호출
+[2026-06-07T15:06:30.438Z] /analytics API 호출
+[2026-06-07T15:06:30.509Z] /analytics API 호출
+[2026-06-07T15:16:29.084Z] /analytics API 호출
+[2026-06-07T15:16:29.222Z] /analytics API 호출
+[2026-06-07T15:16:30.208Z] /analytics API 호출
+[2026-06-07T15:16:30.290Z] /analytics API 호출
+[2026-06-07T15:21:25.989Z] /analytics API 호출
+[2026-06-07T15:21:26.079Z] /analytics API 호출
+[2026-06-07T15:21:27.358Z] /analytics API 호출
+[2026-06-07T15:21:27.440Z] /analytics API 호출
+[2026-06-07T15:24:53.800Z] /analytics API 호출
+[2026-06-07T15:24:53.889Z] /analytics API 호출
+[2026-06-07T15:24:58.491Z] /analytics API 호출
+[2026-06-07T15:24:58.612Z] /analytics API 호출
+[2026-06-07T15:25:14.266Z] /analytics API 호출
+[2026-06-07T15:25:14.308Z] /analytics API 호출
+[2026-06-07T15:25:16.480Z] /analytics API 호출
+[2026-06-07T15:25:16.566Z] /analytics API 호출
+[2026-06-07T15:26:09.972Z] 서버 실행
+[2026-06-07T15:30:47.062Z] /analytics API 호출
+[2026-06-07T15:30:47.122Z] /analytics API 호출
+[2026-06-07T15:30:48.230Z] /analytics API 호출
+[2026-06-07T15:30:48.321Z] /analytics API 호출
+[2026-06-07T15:36:37.724Z] /analytics API 호출
+[2026-06-07T15:36:38.012Z] /analytics API 호출
+[2026-06-07T15:36:39.124Z] /analytics API 호출
+[2026-06-07T15:36:39.204Z] /analytics API 호출

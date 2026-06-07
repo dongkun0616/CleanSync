@@ -39,16 +39,16 @@ app.get("/", (req, res) => {
   res.send("서버 정상 작동 중입니다. /home, /dashboard, /analytics, /settings 로 접속하세요.");
 });
 
-// ================== 메인 홈 API (기기 관리 테이블 연동 버전) ==================
+// ================== 메인 홈 API (app_settings 연동 완료 버전) ==================
 app.get("/home", (req, res) => {
-  const { location } = req.query; // 프론트엔드에서 보낸 location (예: '동아리방')
+  const { location } = req.query;
   const targetLocation = location || "기본";
 
-  // 1. 🚨 [중요] '기기 관리' 탭에서 기기를 저장/삭제할 때 쓰는 실제 기기 테이블 이름을 입력해주세요.
-  // 여기서는 예시로 테이블명을 `devices`, 장소 컬럼명을 `location`으로 가정했습니다.
+  // 1. app_settings 테이블에서 기기가 '연결됨' 상태인지 확인합니다.
   const checkDeviceSql = `
-    SELECT * FROM devices 
-    WHERE location = ? 
+    SELECT DEVICE_STATUS 
+    FROM app_settings 
+    WHERE DEVICE_NAME = ? AND DEVICE_STATUS = '연결됨'
     LIMIT 1
   `;
 
@@ -59,21 +59,14 @@ app.get("/home", (req, res) => {
       return res.status(500).json({ success: false, message: "DB 오류 발생" });
     }
 
-    // 기기 존재 여부 확인 (기기를 삭제하면 테이블에서 행이 지워지므로 결과가 없습니다)
-    const isDeviceExists = deviceResults && deviceResults.length > 0;
-
-    // 만약 기기 삭제 시 데이터를 완전히 지우지 않고 상태(status) 컬럼만 '연결 끊김' 등으로 바꾸는 구조라면
-    // 아래 주석을 해제하고 본인의 컬럼명에 맞게 조건을 수정하여 사용하세요.
-    // const isConnected = isDeviceExists && deviceResults[0].status === '연결됨';
-    
-    const isConnected = isDeviceExists; // 행 삭제 방식일 때의 기준
+    const isConnected = deviceResults && deviceResults.length > 0;
 
     if (!isConnected) {
-      // 🚨 기기가 삭제되었거나 없다면 센서 데이터를 전송하지 않고 즉시 '연결 끊김' 응답
+      // 기기가 삭제되었거나 없다면 센서 데이터를 전송하지 않고 즉시 '연결 끊김' 응답
       return res.json({
         success: true,
         data: {
-          deviceStatus: "연결 끊김", // 프론트엔드 잠금 화면 트리거
+          deviceStatus: "연결 끊김",
           score: 0,
           statusText: "기기 연결 끊김",
           aiMessage: "기기가 연결되어 있지 않아 데이터를 불러올 수 없습니다.",
@@ -112,10 +105,10 @@ app.get("/home", (req, res) => {
       res.json({
         success: true,
         data: {
-          deviceStatus: "연결됨", // 연결됨 상태 전달 -> 프론트엔드 정상 해제
+          deviceStatus: "연결됨", 
           score: Number(data.SPACE_SCORE || 0),
           statusText: data.CST || "알 수 없음",
-          statusLevel: data.STATUS_LEVEL || null,
+          statusLevel: data.STATUS_LEVEL || "알 수 없음",
           aiMessage: data.AI_MESSAGE || "데이터 없음",
           co2: Number(data.CO2 || 0),
           noise: Number(data.NOS || 0),
@@ -134,7 +127,9 @@ app.get("/home", (req, res) => {
 
 // ================== 대시보드 API ==================
 app.get("/dashboard", (req, res) => {
-  const { location } = req.query; // location 파라미터 추가
+  const { location } = req.query;
+  const targetLocation = location || "기본";
+  
   const currentSql = `
     SELECT *
     FROM home_status
@@ -143,7 +138,7 @@ app.get("/dashboard", (req, res) => {
     LIMIT 1
   `;
 
-  getPool().query(currentSql, [location || "기본"], (err, currentResults) => {
+  getPool().query(currentSql, [targetLocation], (err, currentResults) => {
     if (err) {
       console.error("대시보드 현재 데이터 조회 실패:", err);
       saveLog(`대시보드 현재 데이터 조회 실패: ${err.message}`);
@@ -152,20 +147,14 @@ app.get("/dashboard", (req, res) => {
 
     const chartSql = `
       SELECT
-        CO2,
-        NOS,
-        TEMP,
-        HUM,
-        DUST_PM10,
-        DUST_PM25,
-        CREATE_AT
+        CO2, NOS, TEMP, HUM, DUST_PM10, DUST_PM25, CREATE_AT
       FROM ${LOG_TABLE}
       WHERE location = ?
       ORDER BY CREATE_AT DESC
       LIMIT 20
     `;
 
-    getPool().query(chartSql, [location || "기본"], (err, chartResults) => {
+    getPool().query(chartSql, [targetLocation], (err, chartResults) => {
       if (err) {
         console.error("대시보드 차트 데이터 조회 실패:", err);
         saveLog(`대시보드 차트 데이터 조회 실패: ${err.message}`);
@@ -191,7 +180,7 @@ app.get("/dashboard", (req, res) => {
           current: {
             score: Number(latest.SPACE_SCORE || 0),
             statusText: latest.CST || "보통",
-            statusLevel: latest.STATUS_LEVEL || null,
+            statusLevel: latest.STATUS_LEVEL || "쾌적",
             co2: Number(latest.CO2 || 0),
             noise: Number(latest.NOS || 0),
             temperature: Number(latest.TEMP || 0),
@@ -212,32 +201,14 @@ app.get("/analytics", (req, res) => {
   saveLog("/analytics API 호출");
 
   const range = req.query.range || "6h";
-  const location = req.query.location || "기본"; // location 파라미터 추가
+  const location = req.query.location || "기본"; 
 
-  const rangeMap = {
-    "1h": 1,
-    "6h": 6,
-    "12h": 12,
-    "24h": 24
-  };
-
+  const rangeMap = { "1h": 1, "6h": 6, "12h": 12, "24h": 24 };
   const hours = rangeMap[range] || 6;
 
   const sql = `
     SELECT
-      id,
-      DUST_PM10,
-      DUST_PM25,
-      TEMP,
-      HUM,
-      NOS,
-      DST,
-      CREATE_AT,
-      location,
-      CO2,
-      SPACE_SCORE,
-      ANALYSIS_TEXT,
-      ALERT_TYPE
+      id, DUST_PM10, DUST_PM25, TEMP, HUM, NOS, DST, CREATE_AT, location, CO2, SPACE_SCORE, ANALYSIS_TEXT, ALERT_TYPE
     FROM ${LOG_TABLE}
     WHERE location = ?
       AND CREATE_AT >= DATE_SUB((SELECT MAX(CREATE_AT) FROM ${LOG_TABLE} WHERE location = ?), INTERVAL ? HOUR)
@@ -248,24 +219,13 @@ app.get("/analytics", (req, res) => {
     if (err) {
       console.error("통계 데이터 조회 실패:", err);
       saveLog(`통계 데이터 조회 실패: ${err.message}`);
-
-      return res.status(500).json({
-        success: false,
-        message: "통계 데이터 조회 실패"
-      });
+      return res.status(500).json({ success: false, message: "통계 데이터 조회 실패" });
     }
 
     if (!results || results.length === 0) {
       return res.json({
-        success: false,
-        message: "해당 기간의 데이터가 없습니다.",
-        data: {
-          range,
-          count: 0,
-          chart: [],
-          insights: [],
-          summary: null
-        }
+        success: true, // 수정: 에러가 아니라 데이터가 빈 것 뿐이므로 success 처리
+        data: { range, count: 0, chart: [], insights: [], summary: null }
       });
     }
 
@@ -301,27 +261,19 @@ app.get("/analytics", (req, res) => {
 
     const insights = [
       {
-        type: "best_focus_time",
-        title: "최근 집중 시간대",
-        time: bestScoreRow.CREATE_AT,
+        type: "best_focus_time", title: "최근 집중 시간대", time: bestScoreRow.CREATE_AT,
         message: `학습 지수 ${Number(bestScoreRow.SPACE_SCORE || 0)}점으로 가장 높은 집중도를 보인 시간입니다.`
       },
       {
-        type: "co2_warning",
-        title: "최근 CO₂ 발생 시점",
-        time: maxCo2Row.CREATE_AT,
+        type: "co2_warning", title: "최근 CO₂ 발생 시점", time: maxCo2Row.CREATE_AT,
         message: `CO₂ ${Number(maxCo2Row.CO2 || 0)}ppm으로 환기가 필요할 수 있습니다.`
       },
       {
-        type: "good_ratio",
-        title: "쾌적 환경 비율",
-        value: `${goodRatio}%`,
+        type: "good_ratio", title: "쾌적 환경 비율", value: `${goodRatio}%`,
         message: `선택 기간 중 ${goodRatio}%의 시간이 쾌적한 환경이었습니다.`
       },
       {
-        type: "average_score",
-        title: "평균 학습 지수",
-        value: `${avg("SPACE_SCORE")}점`,
+        type: "average_score", title: "평균 학습 지수", value: `${avg("SPACE_SCORE")}점`,
         message: `선택 기간 평균 학습 지수입니다.`
       }
     ];
@@ -338,22 +290,14 @@ app.get("/analytics", (req, res) => {
 
     res.json({
       success: true,
-      data: {
-        range,
-        count: results.length,
-        firstTime: results[0].CREATE_AT,
-        lastTime: results[results.length - 1].CREATE_AT,
-        chart,
-        insights,
-        summary
-      }
+      data: { range, count: results.length, firstTime: results[0].CREATE_AT, lastTime: results[results.length - 1].CREATE_AT, chart, insights, summary }
     });
   });
 });
 
 // ================== 설정 전체 조회 API ==================
 app.get("/settings", (req, res) => {
-  const { userName } = req.query; // 사용자 이름으로 특정 데이터 조회
+  const { userName } = req.query; 
   const settingsSql = `SELECT * FROM app_settings WHERE USER_NAME = ?`;
   const statusSql = `SELECT SPACE_SCORE FROM home_status ORDER BY CREATE_AT DESC LIMIT 1`;
 
@@ -407,23 +351,17 @@ app.get("/settings", (req, res) => {
 // ================== 알림 설정 조회 API ==================
 app.get("/settings/alerts", (req, res) => {
   const { userName } = req.query;
-  const sql = `
-    SELECT * FROM app_settings WHERE USER_NAME = ?
-  `;
+  const sql = `SELECT * FROM app_settings WHERE USER_NAME = ?`;
 
   getPool().query(sql, [userName], (err, results) => {
     if (err) {
       console.error("알림 설정 조회 실패:", err);
-      saveLog(`알림 설정 조회 실패: ${err.message}`);
       return res.status(500).json({ success: false, message: "알림 설정 조회 실패" });
     }
-
     if (!results || results.length === 0) {
       return res.json({ success: false, message: "알림 설정 데이터가 없습니다." });
     }
-
     const data = results[0];
-
     res.json({
       success: true,
       data: {
@@ -447,64 +385,21 @@ app.get("/settings/alerts", (req, res) => {
 
 // ================== 알림 설정 저장 API ==================
 app.put("/settings/alerts", (req, res) => {
-  const {
-    userName,
-    emailAlertEnabled,
-    pushAlertEnabled,
-    dailyReportEnabled,
-    weeklyReportEnabled,
-    co2Threshold,
-    noiseThreshold,
-    temperatureThreshold,
-    dustThreshold,
-    dustAlertEnabled,
-    noiseAlertEnabled,
-    themeMode
-  } = req.body;
+  const { userName, emailAlertEnabled, pushAlertEnabled, dailyReportEnabled, weeklyReportEnabled, co2Threshold, noiseThreshold, temperatureThreshold, dustThreshold, dustAlertEnabled, noiseAlertEnabled, themeMode } = req.body;
 
   const sql = `
     UPDATE app_settings
-    SET
-      EMAIL_ALERT = ?,
-      PUSH_ALERT = ?,
-      DAILY_REPORT = ?,
-      WEEKLY_REPORT = ?,
-      CO2_THRESHOLD = ?,
-      NOS_THRESHOLD = ?,
-      TEMP_THRESHOLD = ?,
-      DUST_THRESHOLD = ?,
-      alert_dust_threshold = ?,
-      alert_noise_threshold = ?,
-      dust_alert_enabled = ?,
-      noise_alert_enabled = ?,
-      theme_mode = ?
+    SET EMAIL_ALERT=?, PUSH_ALERT=?, DAILY_REPORT=?, WEEKLY_REPORT=?, CO2_THRESHOLD=?, NOS_THRESHOLD=?, TEMP_THRESHOLD=?, DUST_THRESHOLD=?, alert_dust_threshold=?, alert_noise_threshold=?, dust_alert_enabled=?, noise_alert_enabled=?, theme_mode=?
     WHERE USER_NAME = ?
   `;
-
   const values = [
-    emailAlertEnabled ? 1 : 0,
-    pushAlertEnabled ? 1 : 0,
-    dailyReportEnabled ? 1 : 0,
-    weeklyReportEnabled ? 1 : 0,
-    Number(co2Threshold),
-    Number(noiseThreshold),
-    Number(temperatureThreshold),
-    Number(dustThreshold),
-    Number(dustThreshold),
-    Number(noiseThreshold),
-    dustAlertEnabled === undefined ? 1 : dustAlertEnabled ? 1 : 0,
-    noiseAlertEnabled === undefined ? 1 : noiseAlertEnabled ? 1 : 0,
-    themeMode || "Light",
-    userName
+    emailAlertEnabled ? 1 : 0, pushAlertEnabled ? 1 : 0, dailyReportEnabled ? 1 : 0, weeklyReportEnabled ? 1 : 0,
+    Number(co2Threshold), Number(noiseThreshold), Number(temperatureThreshold), Number(dustThreshold), Number(dustThreshold), Number(noiseThreshold),
+    dustAlertEnabled === undefined ? 1 : dustAlertEnabled ? 1 : 0, noiseAlertEnabled === undefined ? 1 : noiseAlertEnabled ? 1 : 0, themeMode || "Light", userName
   ];
 
   getPool().query(sql, values, (err) => {
-    if (err) {
-      console.error("알림 설정 저장 실패:", err);
-      saveLog(`알림 설정 저장 실패: ${err.message}`);
-      return res.status(500).json({ success: false, message: "알림 설정 저장 실패" });
-    }
-
+    if (err) return res.status(500).json({ success: false, message: "알림 설정 저장 실패" });
     res.json({ success: true, message: "알림 설정이 저장되었습니다." });
   });
 });
@@ -512,25 +407,10 @@ app.put("/settings/alerts", (req, res) => {
 // ================== 웹 푸시 구독 정보 저장 API ==================
 app.post("/settings/subscription", (req, res) => {
   const { userName, subscription } = req.body;
+  if (!userName || !subscription) return res.status(400).json({ success: false, message: "필수 정보 누락" });
 
-  if (!userName || !subscription) {
-    return res.status(400).json({ success: false, message: "필수 정보가 누락되었습니다." });
-  }
-
-  const sql = `
-    UPDATE app_settings
-    SET PUSH_SUBSCRIPTION = ?
-    WHERE USER_NAME = ?
-  `;
-
-  const values = [JSON.stringify(subscription), userName];
-
-  getPool().query(sql, values, (err) => {
-    if (err) {
-      console.error("푸시 구독 저장 실패:", err);
-      return res.status(500).json({ success: false, message: "푸시 구독 저장 실패" });
-    }
-
+  getPool().query(`UPDATE app_settings SET PUSH_SUBSCRIPTION = ? WHERE USER_NAME = ?`, [JSON.stringify(subscription), userName], (err) => {
+    if (err) return res.status(500).json({ success: false, message: "푸시 구독 저장 실패" });
     res.json({ success: true, message: "푸시 구독 정보가 저장되었습니다." });
   });
 });
@@ -538,68 +418,22 @@ app.post("/settings/subscription", (req, res) => {
 // ================== 기기 관리 조회 API ==================
 app.get("/settings/devices", (req, res) => {
   const { userName } = req.query;
-  const sql = `
-    SELECT DEVICE_NAME, DEVICE_STATUS, LAST_CONNECTED
-    FROM app_settings
-    WHERE USER_NAME = ?
-  `;
-
-  getPool().query(sql, [userName], (err, results) => {
-    if (err) {
-      console.error("기기 관리 조회 실패:", err);
-      saveLog(`기기 관리 조회 실패: ${err.message}`);
-      return res.status(500).json({ success: false, message: "기기 관리 조회 실패" });
-    }
-
-    if (!results || results.length === 0) {
-      return res.json({ success: false, message: "기기 데이터가 없습니다." });
-    }
-
-    const data = results[0];
-
-    res.json({
-      success: true,
-      data: {
-        deviceName: data.DEVICE_NAME || null,
-        deviceStatus: data.DEVICE_STATUS || null,
-        lastConnected: data.LAST_CONNECTED || null
-      }
-    });
+  getPool().query(`SELECT DEVICE_NAME, DEVICE_STATUS, LAST_CONNECTED FROM app_settings WHERE USER_NAME = ?`, [userName], (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: "기기 관리 조회 실패" });
+    if (!results || results.length === 0) return res.json({ success: false, message: "기기 데이터가 없습니다." });
+    res.json({ success: true, data: { deviceName: results[0].DEVICE_NAME || null, deviceStatus: results[0].DEVICE_STATUS || null, lastConnected: results[0].LAST_CONNECTED || null } });
   });
 });
 
-// ================== 기기 관리 삭제 API (수정됨) ==================
+// ================== 기기 관리 삭제 API ==================
 app.delete("/settings/devices", (req, res) => {
-  console.log("[Backend] DELETE /settings/devices 요청 수신. Body:", req.body);
   const { userName } = req.body;
+  if (!userName) return res.status(400).json({ success: false, message: "userName이 누락되었습니다." });
 
-  if (!userName) {
-    console.error("삭제 요청 실패: userName 누락");
-    return res.status(400).json({ success: false, message: "userName이 누락되었습니다." });
-  }
-
-  const sql = `
-    UPDATE app_settings
-    SET
-      DEVICE_NAME = NULL,
-      DEVICE_STATUS = '연결안됨',
-      LAST_CONNECTED = NULL
-    WHERE USER_NAME = ?
-  `;
-
+  const sql = `UPDATE app_settings SET DEVICE_NAME = NULL, DEVICE_STATUS = '연결안됨', LAST_CONNECTED = NULL WHERE USER_NAME = ?`;
   getPool().query(sql, [userName], (err, result) => {
-    if (err) {
-      console.error("기기 삭제 실패(SQL):", err);
-      saveLog(`기기 삭제 실패: ${err.message}`);
-      return res.status(500).json({ success: false, message: "기기 삭제 실패" });
-    }
-
-    if (result.affectedRows === 0) {
-      console.warn("기기 삭제 시도했으나 변경된 행이 없음 (유저 불일치 등)");
-      return res.json({ success: false, message: "삭제할 기기가 없거나 유저 정보를 찾을 수 없습니다." });
-    }
-
-    console.log(`[Backend] 기기 삭제 완료. (UserName: ${userName})`);
+    if (err) return res.status(500).json({ success: false, message: "기기 삭제 실패" });
+    if (result.affectedRows === 0) return res.json({ success: false, message: "유저 정보를 찾을 수 없습니다." });
     res.json({ success: true, message: "기기가 삭제되었습니다." });
   });
 });
@@ -609,119 +443,50 @@ app.get("/settings/profile", (req, res) => {
   const { userName } = req.query;
   let sql = `SELECT USER_NAME, USER_EMAIL, USER_SPACE FROM app_settings`;
   let params = [];
-
-  // userName이 없으면 첫 번째 유저 데이터를 가져오도록 수정
-  if (userName) {
-    sql += ` WHERE USER_NAME = ?`;
-    params = [userName];
-  } else {
-    sql += ` LIMIT 1`;
-  }
+  if (userName) { sql += ` WHERE USER_NAME = ?`; params = [userName]; } else { sql += ` LIMIT 1`; }
 
   getPool().query(sql, params, (err, results) => {
-    if (err) {
-      console.error("프로필 조회 실패:", err);
-      saveLog(`프로필 조회 실패: ${err.message}`);
-      return res.status(500).json({ success: false, message: "프로필 조회 실패" });
-    }
-
-    if (!results || results.length === 0) {
-      return res.json({ success: false, message: "프로필 데이터가 없습니다." });
-    }
-
-    const data = results[0];
-
-    res.json({
-      success: true,
-      data: {
-        userName: data.USER_NAME || null,
-        userEmail: data.USER_EMAIL || null,
-        userSpace: data.USER_SPACE || null
-      }
-    });
+    if (err) return res.status(500).json({ success: false, message: "프로필 조회 실패" });
+    if (!results || results.length === 0) return res.json({ success: false, message: "프로필 데이터가 없습니다." });
+    res.json({ success: true, data: { userName: results[0].USER_NAME || null, userEmail: results[0].USER_EMAIL || null, userSpace: results[0].USER_SPACE || null } });
   });
 });
 
 // ================== 프로필 생성 API ==================
 app.post("/settings/profile", (req, res) => {
   const { userName, userEmail, userSpace } = req.body;
+  if (!userName) return res.status(400).json({ success: false, message: "아이디 필수" });
 
-  if (!userName) {
-    return res.status(400).json({ success: false, message: "아이디(USER_NAME)는 필수입니다." });
-  }
-
-  const sql = `
-    INSERT IGNORE INTO app_settings (USER_NAME, USER_EMAIL, USER_SPACE)
-    VALUES (?, ?, ?)
-  `;
-
-  getPool().query(sql, [userName, userEmail, userSpace], (err, result) => {
-    if (err) {
-      console.error("프로필 생성 실패:", err);
-      return res.status(500).json({ success: false, message: "프로필 생성 실패" });
-    }
-    
-    if (result.affectedRows === 0) {
-      return res.status(409).json({ success: false, message: "이미 존재하는 아이디입니다." });
-    }
-
+  getPool().query(`INSERT IGNORE INTO app_settings (USER_NAME, USER_EMAIL, USER_SPACE) VALUES (?, ?, ?)`, [userName, userEmail, userSpace], (err, result) => {
+    if (err) return res.status(500).json({ success: false, message: "프로필 생성 실패" });
+    if (result.affectedRows === 0) return res.status(409).json({ success: false, message: "이미 존재하는 아이디입니다." });
     res.json({ success: true, message: "프로필이 생성되었습니다." });
   });
 });
 
-// ================== 프로필 저장 API (스마트 자동 연결 로직) ==================
+// ================== 프로필 저장 API ==================
 app.put("/settings/profile", (req, res) => {
   const { userName, userEmail, userSpace } = req.body;
 
-  // 1. 프로필 정보(이메일, 공간)만 업데이트 (기기 정보는 아래에서 별도 처리)
-  const updateProfileSql = `
-    UPDATE app_settings
-    SET
-      USER_EMAIL = ?,
-      USER_SPACE = ?
-    WHERE USER_NAME = ?
-  `;
+  getPool().query(`UPDATE app_settings SET USER_EMAIL = ?, USER_SPACE = ? WHERE USER_NAME = ?`, [userEmail, userSpace, userName], (err) => {
+    if (err) return res.status(500).json({ success: false, message: "프로필 저장 실패" });
 
-  getPool().query(updateProfileSql, [userEmail, userSpace, userName], (err) => {
-    if (err) {
-      console.error("프로필 저장 실패:", err);
-      saveLog(`프로필 저장 실패: ${err.message}`);
-      return res.status(500).json({ success: false, message: "프로필 저장 실패" });
-    }
-
-    // 2. 해당 공간(userSpace)에 실제 센서 데이터가 존재하는지 확인
-    const checkDeviceSql = `
-      SELECT location FROM home_status 
-      WHERE location = ? 
-      ORDER BY CREATE_AT DESC LIMIT 1
-    `;
-
-    getPool().query(checkDeviceSql, [userSpace], (deviceErr, deviceResults) => {
-      // 기기가 존재하면 연결, 없으면 NULL 처리
+    getPool().query(`SELECT location FROM home_status WHERE location = ? ORDER BY CREATE_AT DESC LIMIT 1`, [userSpace], (deviceErr, deviceResults) => {
       const isExists = (!deviceErr && deviceResults && deviceResults.length > 0);
       const deviceName = isExists ? userSpace : null;
       const deviceStatus = isExists ? '연결됨' : '연결안됨';
       const lastConnected = isExists ? new Date() : null;
 
-      const updateStatusSql = `
-        UPDATE app_settings
-        SET DEVICE_NAME = ?, DEVICE_STATUS = ?, LAST_CONNECTED = ?
-        WHERE USER_NAME = ?
-      `;
-
-      getPool().query(updateStatusSql, [deviceName, deviceStatus, lastConnected, userName], (updateErr) => {
-        if (updateErr) {
-          console.error("기기 상태 자동 동기화 실패:", updateErr);
-          return res.status(500).json({ success: false, message: "기기 상태 자동 동기화 실패" });
-        }
-        res.json({ success: true, message: "프로필이 저장되었으며, 기기 상태가 동기화되었습니다." });
+      getPool().query(`UPDATE app_settings SET DEVICE_NAME = ?, DEVICE_STATUS = ?, LAST_CONNECTED = ? WHERE USER_NAME = ?`, [deviceName, deviceStatus, lastConnected, userName], (updateErr) => {
+        if (updateErr) return res.status(500).json({ success: false, message: "기기 상태 자동 동기화 실패" });
+        res.json({ success: true, message: "프로필 저장 및 기기 상태 동기화 완료." });
       });
     });
   });
 });
 
 // ================== 서버 실행 ==================
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`API 서버 실행 중: http://0.0.0.0:${PORT}`);

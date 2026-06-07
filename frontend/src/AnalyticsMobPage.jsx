@@ -26,7 +26,8 @@ const AnalyticsMobPage = () => {
   const [activeMetrics, setActiveMetrics] = useState(['score']);
   const [apiData, setApiData] = useState(null);
   
-  // [수정] sensorData를 상태로 변경하여 API 데이터에 따라 업데이트되도록 수정
+  // 연결 상태 추가
+  const [isConnected, setIsConnected] = useState(true);
   const [sensorData, setSensorData] = useState({ score: 0, statusText: '데이터 로딩중' });
 
   const getScoreColor = (score) => {
@@ -44,13 +45,31 @@ const AnalyticsMobPage = () => {
 
   const fetchAnalyticsData = async (range) => {
     try {
+      const initialUserName = 'dongdong';
+      
+      // 1. 프로필 정보와 기기 상태 확인
+      const [profileRes, deviceRes] = await Promise.all([
+        axios.get(`http://localhost:5000/settings/profile?userName=${initialUserName}`),
+        axios.get(`http://localhost:5000/settings/devices?userName=${initialUserName}`)
+      ]);
+
+      // 🚨 연결이 끊겨있으면 중지
+      if (deviceRes.data?.data?.deviceStatus !== '연결됨') {
+        setIsConnected(false);
+        return;
+      }
+      setIsConnected(true);
+
+      let userSpace = profileRes.data?.data?.userSpace || '동아리방';
       const rangeCode = range.replace('시간', 'h');
-      const response = await axios.get(`http://localhost:3000/analytics?range=${rangeCode}`);
+      
+      // 2. 포트 5000 및 공간 파라미터 적용
+      const response = await axios.get(`http://localhost:5000/analytics?range=${rangeCode}&location=${encodeURIComponent(userSpace)}`);
+      
       if (response.data && response.data.success) {
         const data = response.data.data;
         setApiData(data);
         
-        // [수정] 받아온 데이터 중 마지막(가장 최신) 데이터로 점수 업데이트
         if (data.chart && data.chart.length > 0) {
           const latest = data.chart[data.chart.length - 1];
           setSensorData({ 
@@ -148,29 +167,10 @@ const AnalyticsMobPage = () => {
         * { box-sizing: border-box; }
       `}</style>
 
-      {isMenuOpen && (
-        <div
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000 }}
-          onClick={() => setIsMenuOpen(false)}
-        />
-      )}
+      {isMenuOpen && <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 1000 }} onClick={() => setIsMenuOpen(false)} />}
 
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          right: 0,
-          width: '100%',
-          height: '100%',
-          backgroundColor: '#111827',
-          zIndex: 1001,
-          transform: isMenuOpen ? 'translateX(0)' : 'translateX(100%)',
-          transition: 'transform 0.3s ease-in-out',
-          padding: '16px 20px',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
+      {/* 사이드 메뉴 (메뉴 중앙 정렬 디자인 적용) */}
+      <div style={{ position: 'fixed', top: 0, right: 0, width: '100%', height: '100%', backgroundColor: '#111827', zIndex: 1001, transform: isMenuOpen ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 0.3s ease-in-out', padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', paddingBottom: '16px', borderBottom: '1px solid #374151' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ width: '24px', height: '24px', backgroundColor: '#00A8FF', borderRadius: '6px', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>⚡</div>
@@ -179,19 +179,14 @@ const AnalyticsMobPage = () => {
           <span onClick={() => setIsMenuOpen(false)} style={{ color: '#FFF', fontSize: '24px', cursor: 'pointer' }}>✕</span>
         </div>
 
-        <nav>
+        <nav style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
           {navMenus.map((menu) => {
             const isActive = location.pathname === menu.path;
             return (
-              <div
-                key={menu.path}
-                onClick={() => { navigate(menu.path); setIsMenuOpen(false); }}
-                style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '18px 20px', borderRadius: '16px', marginBottom: '8px', cursor: 'pointer', background: isActive ? 'linear-gradient(90deg, #00A8FF, #0077FF)' : 'transparent' }}
-              >
-                <div>
-                  <div style={{ fontSize: '15px', fontWeight: '700', color: '#FFF' }}>{menu.label}</div>
-                  <div style={{ fontSize: '12px', color: isActive ? 'rgba(255,255,255,0.7)' : '#6B7A99' }}>{menu.sub}</div>
-                </div>
+              <div key={menu.path} onClick={() => { navigate(menu.path); setIsMenuOpen(false); }} 
+                style={{ width: '80%', padding: '18px 20px', borderRadius: '16px', marginBottom: '8px', cursor: 'pointer', background: isActive ? 'linear-gradient(90deg, #00A8FF, #0077FF)' : 'transparent', textAlign: 'center' }}>
+                <div style={{ fontSize: '15px', fontWeight: '700', color: '#FFF' }}>{menu.label}</div>
+                <div style={{ fontSize: '12px', color: isActive ? 'rgba(255,255,255,0.7)' : '#6B7A99', marginTop: '2px' }}>{menu.sub}</div>
               </div>
             );
           })}
@@ -204,90 +199,94 @@ const AnalyticsMobPage = () => {
           <span style={{ fontWeight: '700', color: '#1A202C' }}>Clean-Sync</span>
         </div>
         
-        <div 
-          style={{ fontSize: '14px', fontWeight: '700', display: 'flex', alignItems: 'center', cursor: 'pointer', fontFamily: "'DM Mono', monospace" }} 
-          onClick={() => setIsMenuOpen(true)}
-        >
-          <span style={{ color: getScoreColor(sensorData.score) }}>● {sensorData.score}</span>
+        <div style={{ fontSize: '14px', fontWeight: '700', display: 'flex', alignItems: 'center', cursor: 'pointer'}} onClick={() => setIsMenuOpen(true)}>
+          <span style={{ color: isConnected ? getScoreColor(sensorData.score) : '#94A3B8' }}>{isConnected ? `● ${sensorData.score}` : '○ Offline'}</span>
           <span style={{ fontSize: '24px', color: '#1A202C', marginLeft: '10px' }}>☰</span>
         </div>
       </header>
 
-      <div style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div>
-          <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0, color: '#1E293B', letterSpacing: '-0.5px' }}>통계 및 기록</h1>
+      {!isConnected ? (
+        <div style={{ padding: '100px 20px', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '22px', color: '#475569', marginBottom: '12px', fontWeight: '800', letterSpacing: '-0.5px' }}>현재 기기가 연결되어 있지 않습니다.</h2>
+          <p style={{ color: '#64748B', fontSize: '14px', lineHeight: '1.6' }}>설정 페이지에서 기기 연결 상태를<br/>다시 확인해주세요.</p>
         </div>
+      ) : (
+        <div style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0, color: '#1E293B', letterSpacing: '-0.5px' }}>통계 및 기록</h1>
+          </div>
 
-        <div style={{ display: 'flex', backgroundColor: '#F8FAFC', borderRadius: '16px', padding: '6px', justifyContent: 'space-between', border: '1px solid #F1F5F9' }}>
-          {['1시간', '6시간', '12시간', '24시간'].map(time => {
-            const isActive = timeFilter === time;
-            return (
-              <button key={time} onClick={() => handleFilterClick(time)} 
-                style={{ flex: 1, padding: '10px 0', fontSize: '13px', fontWeight: isActive ? '700' : '600', color: isActive ? '#00A8FF' : '#64748B', backgroundColor: isActive ? '#FFF' : 'transparent', borderRadius: '12px', cursor: 'pointer', border: 'none', transition: 'all 0.2s', boxShadow: isActive ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}>
-                {time}
-              </button>
-            );
-          })}
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {METRIC_CONFIG.map(metric => {
-            const isActive = activeMetrics.includes(metric.id);
-            return (
-              <div key={metric.id} onClick={() => toggleMetric(metric.id)} 
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '24px', backgroundColor: isActive ? metric.color : '#FFF', color: isActive ? '#FFF' : '#4A5568', fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 6px rgba(0,0,0,0.03)', border: isActive ? 'none' : '1px solid #E2E8F0' }}>
-                {!isActive && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: metric.color }} />}
-                {metric.label}
-              </div>
-            );
-          })}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          {[
-            { label: '최고 집중', val: processedData?.bestFocus.time || '--:--', sub: `지수 ${processedData?.bestFocus.score || 0}점`, color: '#10B981' },
-            { label: '최고 CO₂', val: processedData?.maxCo2.time || '--:--', sub: `${processedData?.maxCo2.ppm || 0} ppm`, color: '#F59E0B' },
-            { label: '쾌적 비율', val: processedData?.comfortRatio || '0%', sub: '선택 기간', color: '#3B82F6' },
-            { label: '평균 지수', val: `${processedData?.avgInfo.score || 0}점`, sub: `평균 소음 ${processedData?.avgInfo.noise || 0}dB`, color: '#8B5CF6' }
-          ].map((item, idx) => (
-            <div key={idx} style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '18px', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: '1px solid #F8FAFC' }}>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: item.color, marginBottom: '8px' }}>{item.label}</div>
-              <div style={{ fontSize: '24px', fontWeight: '800', color: item.color, margin: '0 0 4px 0', fontFamily: "'DM Mono', monospace", letterSpacing: '-0.5px' }}>{item.val}</div>
-              <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '500' }}>{item.sub}</div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ backgroundColor: '#FFF', borderRadius: '24px', padding: '8px 24px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: '1px solid #F8FAFC' }}>
-          {processedData && METRIC_CONFIG
-            .filter(m => m.id !== 'score')
-            .map((metric, idx) => {
-              const stat = processedData.stats[metric.id];
+          <div style={{ display: 'flex', backgroundColor: '#F8FAFC', borderRadius: '16px', padding: '6px', justifyContent: 'space-between', border: '1px solid #F1F5F9' }}>
+            {['1시간', '6시간', '12시간', '24시간'].map(time => {
+              const isActive = timeFilter === time;
               return (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: idx === 4 ? 'none' : '1px solid #F1F5F9' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '700', color: '#334155' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: metric.color }} /> {metric.label}
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '15px', fontWeight: '800', color: '#1E293B', fontFamily: "'DM Mono', monospace" }}>
-                      avg {stat.avg.toFixed(1)} {stat.unit}
-                    </span>
-                    <div style={{ fontSize: '11px', color: '#94A3B8', fontFamily: "'DM Mono', monospace" }}>
-                      {stat.min.toFixed(0)}~{stat.max.toFixed(0)}{stat.unit}
-                    </div>
-                  </div>
+                <button key={time} onClick={() => handleFilterClick(time)} 
+                  style={{ flex: 1, padding: '10px 0', fontSize: '13px', fontWeight: isActive ? '700' : '600', color: isActive ? '#00A8FF' : '#64748B', backgroundColor: isActive ? '#FFF' : 'transparent', borderRadius: '12px', cursor: 'pointer', border: 'none', transition: 'all 0.2s', boxShadow: isActive ? '0 2px 4px rgba(0,0,0,0.05)' : 'none' }}>
+                  {time}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {METRIC_CONFIG.map(metric => {
+              const isActive = activeMetrics.includes(metric.id);
+              return (
+                <div key={metric.id} onClick={() => toggleMetric(metric.id)} 
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', borderRadius: '24px', backgroundColor: isActive ? metric.color : '#FFF', color: isActive ? '#FFF' : '#4A5568', fontSize: '13px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s', boxShadow: '0 2px 6px rgba(0,0,0,0.03)', border: isActive ? 'none' : '1px solid #E2E8F0' }}>
+                  {!isActive && <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: metric.color }} />}
+                  {metric.label}
                 </div>
               );
             })}
-        </div>
+          </div>
 
-        <div style={{ backgroundColor: '#FFF', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: '1px solid #F8FAFC' }}>
-          <div style={{ fontSize: '16px', fontWeight: '800', color: '#1E293B', marginBottom: '20px' }}>시계열 차트</div>
-          <div style={{ height: '220px', width: '100%' }}>
-            {apiData && <Line data={chartData} options={chartOptions} />}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            {[
+              { label: '최고 집중', val: processedData?.bestFocus.time || '--:--', sub: `지수 ${processedData?.bestFocus.score || 0}점`, color: '#10B981' },
+              { label: '최고 CO₂', val: processedData?.maxCo2.time || '--:--', sub: `${processedData?.maxCo2.ppm || 0} ppm`, color: '#F59E0B' },
+              { label: '쾌적 비율', val: processedData?.comfortRatio || '0%', sub: '선택 기간', color: '#3B82F6' },
+              { label: '평균 지수', val: `${processedData?.avgInfo.score || 0}점`, sub: `평균 소음 ${processedData?.avgInfo.noise || 0}dB`, color: '#8B5CF6' }
+            ].map((item, idx) => (
+              <div key={idx} style={{ backgroundColor: '#FFF', borderRadius: '20px', padding: '18px', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: '1px solid #F8FAFC' }}>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: item.color, marginBottom: '8px' }}>{item.label}</div>
+                <div style={{ fontSize: '24px', fontWeight: '800', color: item.color, margin: '0 0 4px 0', fontFamily: "'DM Mono', monospace", letterSpacing: '-0.5px' }}>{item.val}</div>
+                <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '500' }}>{item.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ backgroundColor: '#FFF', borderRadius: '24px', padding: '8px 24px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: '1px solid #F8FAFC' }}>
+            {processedData && METRIC_CONFIG
+              .filter(m => m.id !== 'score')
+              .map((metric, idx) => {
+                const stat = processedData.stats[metric.id];
+                return (
+                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 0', borderBottom: idx === 4 ? 'none' : '1px solid #F1F5F9' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', fontWeight: '700', color: '#334155' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: metric.color }} /> {metric.label}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: '15px', fontWeight: '800', color: '#1E293B', fontFamily: "'DM Mono', monospace" }}>
+                        avg {stat.avg.toFixed(1)} {stat.unit}
+                      </span>
+                      <div style={{ fontSize: '11px', color: '#94A3B8', fontFamily: "'DM Mono', monospace" }}>
+                        {stat.min.toFixed(0)}~{stat.max.toFixed(0)}{stat.unit}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          <div style={{ backgroundColor: '#FFF', borderRadius: '24px', padding: '24px', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 12px rgba(0,0,0,0.03)', border: '1px solid #F8FAFC' }}>
+            <div style={{ fontSize: '16px', fontWeight: '800', color: '#1E293B', marginBottom: '20px' }}>시계열 차트</div>
+            <div style={{ height: '220px', width: '100%' }}>
+              {apiData && <Line data={chartData} options={chartOptions} />}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

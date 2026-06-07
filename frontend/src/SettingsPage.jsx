@@ -57,8 +57,6 @@ const SettingsPage = () => {
   
   const [score, setScore] = useState(0);
   const [statusText, setStatusText] = useState('데이터 로딩 중...');
-  
-  const theme = Utils.getTheme(score);
 
   const [activeTab, setActiveTab] = useState('alarm');
   const [settings, setSettings] = useState({ emailAlert: true, pushAlert: false, dailyReport: true, weeklyReport: false, co2: 1000, noise: 55, temp: 27, dust: 35 });
@@ -69,6 +67,32 @@ const SettingsPage = () => {
   const [profile, setProfile] = useState({ userName: '', userEmail: '', userSpace: '' });
   const [isLocked, setIsLocked] = useState(true);
   const [lastUpdate] = useState(new Date());
+
+  // 🚨 기기 연결 상태 판별
+  const isConnected = devices.length > 0;
+
+  // 🚨 다른 페이지와 동일한 테마 색상 로직 적용 (OFFLINE 상태 지원)
+  const getTheme = (score, isConnected) => {
+    if (!isConnected) return { color: '#94A3B8', bg: 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)' };
+    if (score >= 90) return { color: "#059669", bg: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)' };
+    if (score >= 75) return { color: "#10B981", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
+    if (score >= 60) return { color: "#F59E0B", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
+    if (score >= 40) return { color: "#EF4444", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
+    return { color: "#B91C1C", bg: 'linear-gradient(135deg, #FEE2E2 0%, #FFF5F5 100%)' };
+  };
+  const theme = getTheme(score, isConnected);
+
+  // 🚨 줌 방지 로직 적용
+  useEffect(() => {
+    const handleWheel = (e) => { if (e.ctrlKey || e.metaKey) e.preventDefault(); };
+    const handleKeyDown = (e) => { if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '-' || e.key === '0')) e.preventDefault(); };
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // 데이터 불러오기 함수
   const fetchData = async () => {
@@ -133,7 +157,6 @@ const SettingsPage = () => {
   };
 
   useEffect(() => {
-    console.log("[SettingsPage] 컴포넌트 마운트됨");
     fetchData();
   }, []);
 
@@ -191,7 +214,6 @@ const SettingsPage = () => {
   };
 
   const deleteDevice = async (deviceId) => {
-    console.log("!!! [SettingsPage] deleteDevice 호출됨 !!! ID:", deviceId);
     try {
       const res = await axios.delete('http://localhost:5000/settings/devices', {
         data: { userName: initialUserName }
@@ -226,7 +248,6 @@ const SettingsPage = () => {
 
   const saveProfile = async () => {
     try {
-      console.log("저장 요청 데이터:", profile);
       const res = await axios.put('http://localhost:5000/settings/profile', {
         userName: profile.userName,
         userEmail: profile.userEmail,
@@ -235,18 +256,11 @@ const SettingsPage = () => {
 
       if (res.data && res.data.success) {
         alert('프로필이 저장되었습니다.');
-        fetchData(); // 저장 후 전체 데이터(isLocked 상태 포함) 새로고침
+        fetchData();
       } else {
-        console.warn("서버 응답 오류:", res.data);
         alert('저장에 실패했습니다: ' + (res.data.message || '알 수 없는 오류'));
       }
     } catch (err) {
-      console.error("=== 프로필 저장 실패 상세 ===");
-      console.error("에러 메시지:", err.message);
-      if (err.response) {
-        console.error("서버 응답 데이터:", err.response.data);
-        console.error("서버 상태 코드:", err.response.status);
-      }
       alert('서버와 통신하는 중 오류가 발생했습니다. (콘솔을 확인하세요)');
     }
   };
@@ -272,16 +286,24 @@ const SettingsPage = () => {
           </div>
         </div>
 
+        {/* 🚨 OFFLINE 지원을 위해 조건부 렌더링 적용된 부분 🚨 */}
         <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '18px', marginBottom: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <span style={{ fontSize: '12px', color: '#6B7A99', fontWeight: '600' }}>학습 지수</span>
-            <span style={{ fontSize: '11px', color: '#10B981', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}><span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} />LIVE</span>
+            <span style={{ fontSize: '11px', color: isConnected ? '#10B981' : '#94A3B8', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isConnected ? '#10B981' : '#94A3B8', display: 'inline-block' }} />
+              {isConnected ? 'LIVE' : 'OFFLINE'}
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-            <span style={{ fontSize: '48px', fontWeight: '800', color: theme.color, lineHeight: 1, fontFamily: "'DM Mono', monospace" }}>{score}</span>
+            <span style={{ fontSize: '48px', fontWeight: '800', color: theme.color, lineHeight: 1, fontFamily: "'DM Mono', monospace", transition: 'all 0.5s ease' }}>
+              {isConnected ? score : '--'}
+            </span>
             <span style={{ fontSize: '14px', color: '#4A5568' }}>/ 100</span>
           </div>
-          <div style={{ fontSize: '14px', fontWeight: '700', color: theme.color, marginTop: '8px' }}>{statusText}</div>
+          <div style={{ fontSize: '14px', fontWeight: '700', color: theme.color, marginTop: '8px' }}>
+            {isConnected ? statusText : '기기 연결 끊김'}
+          </div>
         </div>
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
@@ -316,15 +338,15 @@ const SettingsPage = () => {
         </div>
       </aside>
 
-      <main style={{ flex: 1, position: 'relative', overflowY: 'auto', background: theme.bg, padding: '40px', boxSizing: 'border-box' }}>
+      <main style={{ flex: 1, position: 'relative', overflowY: 'auto', background: theme.bg, padding: '40px', boxSizing: 'border-box', transition: 'background 0.8s ease' }}>
         <ParticleBg color={theme.color} />
         <div style={{ maxWidth: '900px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{ marginBottom: '32px' }}>
             <h1 style={{ fontSize: '32px', fontWeight: '800', color: '#1A202C', margin: '0 0 20px 0' }}>설정</h1>
             <div style={{ display: 'flex', gap: '20px', borderBottom: '1px solid #E2E8F0', marginBottom: '40px' }}>
-              <button onClick={() => setActiveTab('alarm')} style={{ padding: '10px 0', border: 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'alarm' ? '700' : '500', color: activeTab === 'alarm' ? theme.color : '#64748B', borderBottom: activeTab === 'alarm' ? `2px solid ${theme.color}` : 'none' }}>알림 설정</button>
-              <button onClick={() => setActiveTab('device')} style={{ padding: '10px 0', border: 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'device' ? '700' : '500', color: activeTab === 'device' ? theme.color : '#64748B', borderBottom: activeTab === 'device' ? `2px solid ${theme.color}` : 'none' }}>기기 관리</button>
-              <button onClick={() => setActiveTab('profile')} style={{ padding: '10px 0', border: 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'profile' ? '700' : '500', color: activeTab === 'profile' ? theme.color : '#64748B', borderBottom: activeTab === 'profile' ? `2px solid ${theme.color}` : 'none' }}>프로필 정보</button>
+              <button onClick={() => setActiveTab('alarm')} style={{ padding: '10px 0', border: 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'alarm' ? '700' : '500', color: activeTab === 'alarm' ? theme.color : '#64748B', borderBottom: activeTab === 'alarm' ? `2px solid ${theme.color}` : 'none', transition: 'all 0.2s' }}>알림 설정</button>
+              <button onClick={() => setActiveTab('device')} style={{ padding: '10px 0', border: 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'device' ? '700' : '500', color: activeTab === 'device' ? theme.color : '#64748B', borderBottom: activeTab === 'device' ? `2px solid ${theme.color}` : 'none', transition: 'all 0.2s' }}>기기 관리</button>
+              <button onClick={() => setActiveTab('profile')} style={{ padding: '10px 0', border: 'none', background: 'none', cursor: 'pointer', fontWeight: activeTab === 'profile' ? '700' : '500', color: activeTab === 'profile' ? theme.color : '#64748B', borderBottom: activeTab === 'profile' ? `2px solid ${theme.color}` : 'none', transition: 'all 0.2s' }}>프로필 정보</button>
             </div>
           </div>
           

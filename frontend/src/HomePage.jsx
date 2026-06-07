@@ -242,20 +242,29 @@ const HomePage = () => {
 
   const fetchData = async () => {
     try {
-      const locationName = '동아리방'; 
-      const response = await fetch(`http://localhost:5000/home?location=${locationName}`);
+      // 1. 프로필 정보 불러오기
+      const initialUserName = 'dongdong'; 
+      const settingsRes = await fetch(`http://localhost:5000/settings/profile?userName=${initialUserName}`);
+      const settingsResult = await settingsRes.json();
+      
+      let userSpace = '동아리방'; // 기본값
+      if (settingsResult.success && settingsResult.data && settingsResult.data.userSpace) {
+        userSpace = settingsResult.data.userSpace;
+      }
+
+      // 2. 주 사용공간을 포함하여 홈 데이터 요청
+      const response = await fetch(`http://localhost:5000/home?location=${encodeURIComponent(userSpace)}`);
       const result = await response.json();
 
       if (result && result.success && result.data) {
         const d = result.data;
-        // 이제 백엔드가 기기 삭제 여부를 판별해서 deviceStatus를 주므로 정상 작동합니다!
         const connected = d.deviceStatus === '연결됨'; 
         
         setIsDeviceConnected(connected); 
 
         setSensorData({
             score: Number(d.score || 0),
-            statusText: d.statusText || '알 수 없음',
+            statusText: d.statusLevel || '알 수 없음',
             aiMessage: d.aiMessage || '분석 중인 데이터가 없습니다.',
             temperature: Number(d.temperature || 0),
             humidity: Number(d.humidity || 0),
@@ -280,11 +289,13 @@ const HomePage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const getTheme = (score, isConnected) => {
+ const getTheme = (score, isConnected) => {
     if (!isConnected) return { color: '#94A3B8', bg: 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)' };
-    if (score >= 80) return { color: '#10B981', bg: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)' };
-    if (score >= 60) return { color: '#F59E0B', bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
-    return { color: '#EF4444', bg: 'linear-gradient(135deg, #FEE2E2 0%, #FFF5F5 100%)' };
+    if (score >= 90) return { color: "#059669", bg: 'linear-gradient(135deg, #D1FAE5 0%, #ECFDF5 100%)' };
+    if (score >= 75) return { color: "#10B981", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
+    if (score >= 60) return { color: "#F59E0B", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
+    if (score >= 40) return { color: "#EF4444", bg: 'linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%)' };
+    return { color: "#B91C1C", bg: 'linear-gradient(135deg, #FEE2E2 0%, #FFF5F5 100%)' };
   };
   const theme = getTheme(sensorData.score, isDeviceConnected);
 
@@ -440,8 +451,8 @@ const HomePage = () => {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <SensorCard icon={<img src="/temp-icon.png" style={iconStyle} />} iconSize="70px" label="온도" value={sensorData.temperature} unit="°C" color={theme.color} />
-                <SensorCard icon={<img src="/hum-icon.png" style={iconStyle} />} iconSize="70px" label="습도" value={sensorData.humidity} unit="%" color={theme.color} />
+                <SensorCard icon={<img src="/temp-icon.png" style={iconStyle} />} label="온도" value={sensorData.temperature} unit="°C" color={theme.color} />
+                <SensorCard icon={<img src="/hum-icon.png" style={iconStyle} />} label="습도" value={sensorData.humidity} unit="%" color={theme.color} />
                 <SensorCard icon={<img src="/co2-icon.png" style={iconStyle} />} label="이산화탄소(CO₂)" value={sensorData.co2} unit="ppm" color={theme.color} />
                 <SensorCard icon={<img src="/noise-icon.png" style={iconStyle} />} label="소음" value={sensorData.noise} unit="dB" color={theme.color} />
                 <SensorCard icon={<img src="/dust-icon.png" style={iconStyle} />} label="미세먼지(PM10)" value={sensorData.dustPm10} unit="㎍/㎥" color={theme.color} />
