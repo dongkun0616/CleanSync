@@ -21,9 +21,9 @@ THRESHOLDS = {
     "PM25_BAD": 35,          # 미세먼지 임계값
     "PM25_NORMAL": 15,
     "PM10_BAD": 80,
-    "NOISE_CONGESTED": 55,   # 소음 임계값
-    "NOISE_NORMAL": 10,
-    "NOISE_HIGH": 55,        # 소음 임계값
+    "NOISE_NORMAL": 10,      # 혁진님 실측 기반: 10 미만은 사람이 없는 조용한 상태
+    "NOISE_CONGESTED": 45,   # 혁진님 실측 기반: 45 이상은 꽤 북적이고 시끄러운 상태
+    "NOISE_HIGH": 55,        # 소음 최고 위험 임계값
     "CO2_BAD": 1000,         # CO2 기본 임계값 (DB 설정이 우선됨)
     "TEMP_HIGH_ALERT": 27,   # 최고 온도 임계값
     "TEMP_LOW_ALERT": 18,
@@ -75,17 +75,14 @@ def send_report(report_type):
     try:
         conn = pymysql.connect(**DB_CONFIG)
         with conn.cursor() as cursor:
-            # 설정 확인 (DAILY_REPORT, WEEKLY_REPORT 컬럼 사용)
             cursor.execute("SELECT USER_EMAIL, DAILY_REPORT, WEEKLY_REPORT FROM app_settings LIMIT 1")
             settings = cursor.fetchone()
             
             if not settings: return
             
-            # 리포트 기능 활성화 여부 확인
             is_enabled = settings['DAILY_REPORT'] if report_type == 'daily' else settings['WEEKLY_REPORT']
             if not is_enabled: return
 
-            # 데이터 평균 계산
             query = f"""
                 SELECT AVG(TEMP) as avg_temp, AVG(HUM) as avg_hum, AVG(CO2) as avg_co2, 
                        AVG(DUST_PM25) as avg_pm25, AVG(DUST_PM10) as avg_pm10 
@@ -97,7 +94,6 @@ def send_report(report_type):
             
             if not data or data['avg_temp'] is None: return 
 
-            # 이메일 전송
             title = f"[Clean-Sync] {'일일' if report_type == 'daily' else '주간'} 리포트"
             body = f"""
             안녕하세요, Clean-Sync {report_type} 리포트입니다.
@@ -121,16 +117,14 @@ def send_report(report_type):
 
 # ================== 스케줄러 설정 ==================
 def run_scheduler():
-    # 매일 09:00 일일 리포트
     schedule.every().day.at("09:00").do(lambda: send_report('daily'))
-    # 매주 월요일 09:00 주간 리포트
     schedule.every().monday.at("09:00").do(lambda: send_report('weekly'))
     
     while True:
         schedule.run_pending()
         time.sleep(60)
 
-# ================== 웹 푸시 발송 함수 (수정됨) ==================
+# ================== 웹 푸시 발송 함수 ==================
 def send_web_push(subscription_info, message):
     if not subscription_info:
         return
@@ -158,29 +152,39 @@ def send_web_push(subscription_info, message):
                 "sub": f"mailto:{os.getenv('EMAIL_USER')}",
                 "aud": aud
             },
-            ttl=3600  # 400 Bad Request 해결을 위해 TTL 추가
+            ttl=3600
         )
         print("📱 웹 푸시 발송 성공!")
     except Exception as e:
         print(f"❌ 웹 푸시 발송 실패: {e}")
 
 # =========================================================
-# 상태 계산 로직
+# 상태 계산 로직 (혁진님 실측 데이터 반영 및 업그레이드)
 # =========================================================
 def calc_dust_status(pm25):
     if pm25 > THRESHOLDS["PM25_BAD"]: return "나쁨"
     elif pm25 > THRESHOLDS["PM25_NORMAL"]: return "보통"
     else: return "좋음"
 
+# 소음 기반 동아리방 상태 문자열 연산
 def calc_congestion(noise):
-    if noise <= THRESHOLDS["NOISE_NORMAL"]: return "여유"
-    elif noise <= THRESHOLDS["NOISE_CONGESTED"]: return "보통"
-    else: return "혼잡"
+    if noise < THRESHOLDS["NOISE_NORMAL"]: return "여유(비었음)"
+    elif noise <= THRESHOLDS["NOISE_CONGESTED"]: return "보통(대화중)"
+    else: return "혼잡(시끄러움)"
 
+# 소음 점수 가이드라인
 def calc_congestion_score(noise):
-    if noise < THRESHOLDS["NOISE_NORMAL"]: return 30
-    elif noise < THRESHOLDS["NOISE_CONGESTED"]: return 60
-    else: return 90
+    if noise < THRESHOLDS["NOISE_NORMAL"]: return 20   # 매우 쾌적한 수준
+    elif noise < THRESHOLDS["NOISE_CONGESTED"]: return 50 # 평범한 대화 수준
+    else: return 85                                   # 혼잡 수준
+
+# 사람이 동아리방에 존재하는지 실시간 판단 (0: 없음, 1: 있음)
+def calc_presence(noise):
+    # 소음 편차가 10 이상이면 사람이 활동하여 말소리를 내고 있다고 판별
+    if noise >= THRESHOLDS["NOISE_NORMAL"]:
+        return 1
+    else:
+        return 0
 
 def calc_space_score(co2, noise, temp, hum, pm25):
     score = 100
@@ -249,7 +253,11 @@ def on_message(client, userdata, msg):
         kst_now = datetime.now(timezone.utc) + timedelta(hours=9)
         formatted_time = kst_now.strftime("%Y-%m-%d %H:%M:%S")
 
-        dst_status, cst, cs = calc_dust_status(pm25), calc_congestion(noise), calc_congestion_score(noise)
+        dst_status = calc_dust_status(pm25)
+        cst = calc_congestion(noise)          # '여유(비었음)', '보통(대화중)' 등으로 연산
+        cs = calc_congestion_score(noise)
+        presence = calc_presence(noise)       # 실시간 재실 여부 연산 (0 또는 1)
+
         space_score = calc_space_score(co2, noise, temp, hum, pm25)
         status_level = calc_status_level(space_score)
         ai_message = calc_ai_message(temp, hum, pm25, pm10, noise, co2)
@@ -270,13 +278,14 @@ def on_message(client, userdata, msg):
                 print("🛑 기기 연결 해제 상태 - 데이터 수집 중단")
                 return
 
-            # 2. 데이터 저장
+            # 2. 데이터 저장 (WIFI_COUNT 자리에 실시간 소음 기반 재실자 유무 변수(presence) 매칭!)
             sql = """
                 INSERT INTO home_status 
                 (DUST_PM10, DUST_PM25, TEMP, HUM, NOS, CREATE_AT, DST, CST, CS, WIFI_COUNT, location, CO2, SPACE_SCORE, AI_MESSAGE, STATUS_LEVEL)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
-            values = (pm10, pm25, temp, hum, noise, formatted_time, dst_status, cst, cs, 0, "동아리방", co2, space_score, ai_message, status_level)
+            # 기존에 고정 0으로 보내던 WIFI_COUNT 자리에 presence 값을 할당했습니다.
+            values = (pm10, pm25, temp, hum, noise, formatted_time, dst_status, cst, cs, presence, "동아리방", co2, space_score, ai_message, status_level)
             cursor.execute(sql, values)
 
             # 3. 알림 로직 (위에서 조회한 user_setting 활용)
@@ -313,7 +322,7 @@ def on_message(client, userdata, msg):
                     last_email_sent_time = current_time
         
         conn.commit()
-        print(f"✔️ 저장 완료 | {formatted_time} | CO2={co2}")
+        print(f"✔️ 저장 완료 | {formatted_time} | 소음={noise} -> 상태={cst}(재실:{presence})")
 
     except Exception as e:
         print(f"❌ 에러 발생: {e}")
